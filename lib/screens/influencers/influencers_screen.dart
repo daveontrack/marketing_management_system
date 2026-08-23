@@ -1,16 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/colors.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
-import '../../models/app_models.dart';
+import '../../models/influencer.dart';
 import '../../widgets/badges/status_badge.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Local mutable list — mirrors InfluencerRepository seed data so Add/Edit/Delete
-// work without touching the read-only Repository list.
-// ─────────────────────────────────────────────────────────────────────────────
-final List<Influencer> _influencers = List.from(InfluencerRepository.getAll());
-int _nextInfluencerId = _influencers.length + 1;
 
 class InfluencersScreen extends StatefulWidget {
   const InfluencersScreen({super.key});
@@ -19,6 +12,13 @@ class InfluencersScreen extends StatefulWidget {
 }
 
 class _InfluencersScreenState extends State<InfluencersScreen> {
+  // Data source: InfluencerRepository (Supabase-backed). The local copy below
+  // is rebuilt via [_reload] after every mutation so setState picks up changes
+  // made through [InfluencerRepository].
+  List<Influencer> _influencers = List.from(InfluencerRepository.getAll());
+
+  void _reload() => _influencers = List.from(InfluencerRepository.getAll());
+
   String _searchQuery = '';
   String _platformFilter = 'All';
   String _statusFilter = 'All';
@@ -206,7 +206,7 @@ class _InfluencersScreenState extends State<InfluencersScreen> {
                               final inf = Influencer(
                                 id: isEdit
                                     ? existing.id
-                                    : 'INF${(_nextInfluencerId++).toString().padLeft(3, '0')}',
+                                    : InfluencerRepository.nextId(),
                                 name: nameCtrl.text.trim(),
                                 handle: handleCtrl.text.trim().isEmpty
                                     ? '@${nameCtrl.text.trim().toLowerCase().replaceAll(' ', '')}'
@@ -231,20 +231,14 @@ class _InfluencersScreenState extends State<InfluencersScreen> {
                                         .map((w) => w[0].toUpperCase())
                                         .join()
                                     : nameCtrl.text.trim()[0].toUpperCase(),
-                                avatarColor: isEdit
-                                    ? existing.avatarColor
-                                    : AppColors.chartPalette[
-                                        _influencers.length %
-                                            AppColors.chartPalette.length],
                               );
                               setState(() {
                                 if (isEdit) {
-                                  final idx = _influencers
-                                      .indexWhere((i) => i.id == inf.id);
-                                  if (idx != -1) _influencers[idx] = inf;
+                                  InfluencerRepository.update(inf);
                                 } else {
-                                  _influencers.add(inf);
+                                  InfluencerRepository.add(inf);
                                 }
+                                _reload();
                               });
                               Navigator.pop(ctx);
                               _showSnack(isEdit
@@ -283,7 +277,8 @@ class _InfluencersScreenState extends State<InfluencersScreen> {
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.danger, foregroundColor: Colors.white),
             onPressed: () {
-              setState(() => _influencers.removeWhere((i) => i.id == inf.id));
+              InfluencerRepository.remove(inf.id);
+              setState(_reload);
               Navigator.pop(ctx);
               _showSnack('Influencer removed');
             },

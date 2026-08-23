@@ -1,4 +1,5 @@
 import '../core/constants.dart';
+import '../services/entity_remote_stores.dart';
 
 class Customer {
   final int id;
@@ -150,6 +151,25 @@ class CustomerRepository {
     ),
   ];
 
+  static bool _initialized = false;
+
+  /// Loads customers from Supabase once at startup (called from main.dart).
+  /// Falls back to bundled seed data when the backend is unreachable; seeds
+  /// the remote table from local data on first run when it is empty.
+  static Future<void> init() async {
+    if (_initialized) return;
+    _initialized = true;
+    final remote = await CustomerRemoteStore.fetchAll();
+    if (remote == null) return;
+    if (remote.isEmpty) {
+      await CustomerRemoteStore.seed(_customers);
+    } else {
+      _customers
+        ..clear()
+        ..addAll(remote);
+    }
+  }
+
   static List<Customer> getAll() => List.unmodifiable(_customers);
 
   static Customer? findById(int id) {
@@ -162,15 +182,20 @@ class CustomerRepository {
 
   static void add(Customer customer) {
     _customers.add(customer);
+    CustomerRemoteStore.upsert(customer); // fire-and-forget sync
   }
 
   static void update(Customer customer) {
     final idx = _customers.indexWhere((c) => c.id == customer.id);
-    if (idx != -1) _customers[idx] = customer;
+    if (idx != -1) {
+      _customers[idx] = customer;
+      CustomerRemoteStore.upsert(customer); // fire-and-forget sync
+    }
   }
 
   static void remove(int id) {
     _customers.removeWhere((c) => c.id == id);
+    CustomerRemoteStore.delete(id); // fire-and-forget sync
   }
 
   static int nextId() {

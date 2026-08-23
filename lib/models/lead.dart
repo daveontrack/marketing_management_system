@@ -1,4 +1,5 @@
 import '../core/constants.dart';
+import '../services/entity_remote_stores.dart';
 
 class Lead {
   final int id;
@@ -190,6 +191,25 @@ class LeadRepository {
     ),
   ];
 
+  static bool _initialized = false;
+
+  /// Loads leads from Supabase once at startup (called from main.dart).
+  /// Falls back to bundled seed data when the backend is unreachable; seeds
+  /// the remote table from local data on first run when it is empty.
+  static Future<void> init() async {
+    if (_initialized) return;
+    _initialized = true;
+    final remote = await LeadRemoteStore.fetchAll();
+    if (remote == null) return;
+    if (remote.isEmpty) {
+      await LeadRemoteStore.seed(_leads);
+    } else {
+      _leads
+        ..clear()
+        ..addAll(remote);
+    }
+  }
+
   static List<Lead> getAll() => List.unmodifiable(_leads);
 
   static Lead? findById(int id) {
@@ -202,15 +222,20 @@ class LeadRepository {
 
   static void add(Lead lead) {
     _leads.add(lead);
+    LeadRemoteStore.upsert(lead); // fire-and-forget sync
   }
 
   static void update(Lead lead) {
     final idx = _leads.indexWhere((l) => l.id == lead.id);
-    if (idx != -1) _leads[idx] = lead;
+    if (idx != -1) {
+      _leads[idx] = lead;
+      LeadRemoteStore.upsert(lead); // fire-and-forget sync
+    }
   }
 
   static void remove(int id) {
     _leads.removeWhere((l) => l.id == id);
+    LeadRemoteStore.delete(id); // fire-and-forget sync
   }
 
   static int nextId() {

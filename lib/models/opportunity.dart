@@ -1,3 +1,5 @@
+import '../services/entity_remote_stores.dart';
+
 class Opportunity {
   final int id;
   final String name;
@@ -146,6 +148,26 @@ class OpportunityRepository {
     ),
   ];
 
+  static bool _initialized = false;
+
+  /// Loads opportunities from Supabase once at startup (called from
+  /// main.dart). Falls back to bundled seed data when the backend is
+  /// unreachable; seeds the remote table from local data on first run when
+  /// it is empty.
+  static Future<void> init() async {
+    if (_initialized) return;
+    _initialized = true;
+    final remote = await OpportunityRemoteStore.fetchAll();
+    if (remote == null) return;
+    if (remote.isEmpty) {
+      await OpportunityRemoteStore.seed(_opportunities);
+    } else {
+      _opportunities
+        ..clear()
+        ..addAll(remote);
+    }
+  }
+
   static List<Opportunity> getAll() => List.unmodifiable(_opportunities);
 
   static List<Opportunity> getByStage(String stage) {
@@ -162,15 +184,20 @@ class OpportunityRepository {
 
   static void add(Opportunity opportunity) {
     _opportunities.add(opportunity);
+    OpportunityRemoteStore.upsert(opportunity); // fire-and-forget sync
   }
 
   static void update(Opportunity opportunity) {
     final idx = _opportunities.indexWhere((o) => o.id == opportunity.id);
-    if (idx != -1) _opportunities[idx] = opportunity;
+    if (idx != -1) {
+      _opportunities[idx] = opportunity;
+      OpportunityRemoteStore.upsert(opportunity); // fire-and-forget sync
+    }
   }
 
   static void remove(int id) {
     _opportunities.removeWhere((o) => o.id == id);
+    OpportunityRemoteStore.delete(id); // fire-and-forget sync
   }
 
   static void updateStage(int id, String newStage) {
@@ -186,6 +213,7 @@ class OpportunityRepository {
         stage: newStage,
         createdAt: _opportunities[index].createdAt,
       );
+      OpportunityRemoteStore.upsert(_opportunities[index]); // sync stage move
     }
   }
 

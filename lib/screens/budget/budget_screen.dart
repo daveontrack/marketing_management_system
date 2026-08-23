@@ -1,74 +1,14 @@
-﻿import 'package:fl_chart/fl_chart.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../core/colors.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Local budget model
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _BudgetItem {
-  String id, name, category, description, status;
-  double allocated, spent;
-  DateTime startDate, endDate, lastUpdated;
-
-  _BudgetItem({
-    required this.id, required this.name, required this.category,
-    required this.allocated, required this.spent, required this.startDate,
-    required this.endDate, required this.description, required this.status,
-    required this.lastUpdated,
-  });
-
-  double get remaining => (allocated - spent).clamp(0, double.infinity);
-  double get utilization => allocated > 0 ? (spent / allocated).clamp(0, 1) : 0;
-
-  String get utilizationStatus {
-    if (utilization >= 1.0) return 'Over Budget';
-    if (utilization >= 0.85) return 'Near Limit';
-    return 'Healthy';
-  }
-
-  Color get utilizationColor {
-    if (utilization >= 1.0) return AppColors.danger;
-    if (utilization >= 0.85) return AppColors.warning;
-    return AppColors.success;
-  }
-}
+import '../../models/budget.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Seed data
+// Data source: BudgetRepository (Supabase-backed). The former local
+// Budget model and seed list moved into lib/models/budget.dart.
 // ─────────────────────────────────────────────────────────────────────────────
-
-final List<_BudgetItem> _seedBudgets = [
-  _BudgetItem(id: 'B001', name: 'Digital Advertising', category: 'Advertising',
-      allocated: 320000, spent: 272000, startDate: DateTime(2026, 1, 1),
-      endDate: DateTime(2026, 12, 31), description: 'Google Ads, Facebook Ads, and display campaigns.',
-      status: AppConstants.statusActive, lastUpdated: DateTime(2026, 8, 10)),
-  _BudgetItem(id: 'B002', name: 'Blog & Video Content', category: 'Content',
-      allocated: 150000, spent: 68000, startDate: DateTime(2026, 1, 1),
-      endDate: DateTime(2026, 12, 31), description: 'Blog posts, videos, and infographic production.',
-      status: AppConstants.statusActive, lastUpdated: DateTime(2026, 8, 8)),
-  _BudgetItem(id: 'B003', name: 'Influencer Partnerships', category: 'Influencer Marketing',
-      allocated: 180000, spent: 178500, startDate: DateTime(2026, 4, 1),
-      endDate: DateTime(2026, 9, 30), description: 'Sponsored posts and collaboration fees.',
-      status: AppConstants.statusActive, lastUpdated: DateTime(2026, 8, 12)),
-  _BudgetItem(id: 'B004', name: 'Annual Conference', category: 'Events',
-      allocated: 220000, spent: 238000, startDate: DateTime(2026, 6, 1),
-      endDate: DateTime(2026, 8, 31), description: 'Addis Ababa marketing summit — venue, catering, AV.',
-      status: AppConstants.statusActive, lastUpdated: DateTime(2026, 8, 14)),
-  _BudgetItem(id: 'B005', name: 'Email & SMS Campaigns', category: 'Email/SMS',
-      allocated: 80000, spent: 42000, startDate: DateTime(2026, 1, 1),
-      endDate: DateTime(2026, 12, 31), description: 'Bulk email platform, SMS gateway, automation tools.',
-      status: AppConstants.statusActive, lastUpdated: DateTime(2026, 8, 7)),
-  _BudgetItem(id: 'B006', name: 'Market Research', category: 'Other',
-      allocated: 50000, spent: 12500, startDate: DateTime(2026, 1, 1),
-      endDate: DateTime(2026, 6, 30), description: 'Consumer surveys, competitor analysis, reports.',
-      status: AppConstants.statusPaused, lastUpdated: DateTime(2026, 7, 15)),
-];
-
-int _nextBudgetId = 7;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BudgetScreen
@@ -76,12 +16,18 @@ int _nextBudgetId = 7;
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
+
   @override
   State<BudgetScreen> createState() => _BudgetScreenState();
 }
 
 class _BudgetScreenState extends State<BudgetScreen> {
-  final List<_BudgetItem> _budgets = List.from(_seedBudgets);
+  /// Working copy of the repository data, refreshed after every mutation so
+  /// setState picks up changes made through [BudgetRepository].
+  List<Budget> _budgets = List.from(BudgetRepository.getAll());
+
+  void _reload() => _budgets = List.from(BudgetRepository.getAll());
+
   String _searchQuery = '';
   String _categoryFilter = 'All';
   String _statusFilter = 'All';
@@ -99,7 +45,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     'This Month', 'Last Month', 'This Quarter', 'This Year', 'Custom Range',
   ];
 
-  List<_BudgetItem> get _filtered => _budgets.where((b) {
+  List<Budget> get _filtered => _budgets.where((b) {
     final q = _searchQuery.toLowerCase();
     final matchQ = q.isEmpty || b.name.toLowerCase().contains(q) ||
         b.category.toLowerCase().contains(q) || b.description.toLowerCase().contains(q);
@@ -122,7 +68,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
-  void _openForm({_BudgetItem? existing}) {
+  void _openForm({Budget? existing}) {
     final isEdit = existing != null;
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final allocatedCtrl = TextEditingController(
@@ -261,8 +207,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             backgroundColor: AppColors.primary, foregroundColor: Colors.white),
                         onPressed: () {
                           if (!formKey.currentState!.validate()) return;
-                          final item = _BudgetItem(
-                            id: isEdit ? existing.id : 'B${(_nextBudgetId++).toString().padLeft(3, '0')}',
+                          final item = Budget(
+                            id: isEdit ? existing.id : BudgetRepository.nextId(),
                             name: nameCtrl.text.trim(), category: category,
                             allocated: double.parse(allocatedCtrl.text.trim()),
                             spent: isEdit ? existing.spent : 0,
@@ -271,8 +217,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
                             lastUpdated: DateTime.now(),
                           );
                           setState(() {
-                            if (isEdit) { final idx = _budgets.indexWhere((b) => b.id == item.id); if (idx != -1) _budgets[idx] = item; }
-                            else { _budgets.add(item); }
+                            if (isEdit) {
+                              BudgetRepository.update(item);
+                            } else {
+                              BudgetRepository.add(item);
+                            }
+                            _reload();
                           });
                           Navigator.pop(ctx);
                           _showSnack(isEdit ? 'Budget updated.' : 'Budget added.');
@@ -290,7 +240,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  void _confirmDelete(_BudgetItem b) {
+  void _confirmDelete(Budget b) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -302,7 +252,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.white),
             onPressed: () {
-              setState(() => _budgets.removeWhere((item) => item.id == b.id));
+              setState(() {
+                BudgetRepository.remove(b.id);
+                _reload();
+              });
               Navigator.pop(ctx); _showSnack('Budget deleted.');
             },
             child: const Text('Delete'),
@@ -630,7 +583,7 @@ class _KpiCard extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ChartsSection extends StatelessWidget {
-  final List<_BudgetItem> budgets;
+  final List<Budget> budgets;
   const _ChartsSection({required this.budgets});
 
   @override
@@ -828,7 +781,7 @@ class _SpendingTrendChart extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _UtilizationSection extends StatelessWidget {
-  final List<_BudgetItem> budgets;
+  final List<Budget> budgets;
   const _UtilizationSection({required this.budgets});
 
   @override
@@ -879,7 +832,7 @@ class _UtilizationSection extends StatelessWidget {
 }
 
 class _UtilizationRow extends StatelessWidget {
-  final _BudgetItem budget;
+  final Budget budget;
   const _UtilizationRow({required this.budget});
 
   @override
@@ -920,7 +873,7 @@ class _UtilizationRow extends StatelessWidget {
 }
 
 class _AllocationDonut extends StatefulWidget {
-  final List<_BudgetItem> budgets;
+  final List<Budget> budgets;
   const _AllocationDonut({required this.budgets});
   @override
   State<_AllocationDonut> createState() => _AllocationDonutState();
@@ -1007,7 +960,7 @@ class _AllocationDonutState extends State<_AllocationDonut> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _AlertsSection extends StatelessWidget {
-  final List<_BudgetItem> budgets;
+  final List<Budget> budgets;
   const _AlertsSection({required this.budgets});
 
   List<_Alert> _buildAlerts() {
@@ -1089,13 +1042,13 @@ class _Alert {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _BudgetTableSection extends StatelessWidget {
-  final List<_BudgetItem> items, allFiltered;
+  final List<Budget> items, allFiltered;
   final String searchQuery, categoryFilter, statusFilter;
   final int currentPage, pageCount;
   final List<String> categories, statusOptions;
   final ValueChanged<String> onSearchChanged, onCategoryChanged, onStatusChanged;
   final ValueChanged<int> onPageChanged;
-  final ValueChanged<_BudgetItem> onEdit, onDelete, onView;
+  final ValueChanged<Budget> onEdit, onDelete, onView;
 
   const _BudgetTableSection({
     required this.items, required this.allFiltered,
@@ -1217,8 +1170,8 @@ class _BudgetTableSection extends StatelessWidget {
   }
 }
 
-DataRow _budgetRow(_BudgetItem b, ValueChanged<_BudgetItem> onEdit,
-    ValueChanged<_BudgetItem> onDelete, ValueChanged<_BudgetItem> onView, Brightness brightness) {
+DataRow _budgetRow(Budget b, ValueChanged<Budget> onEdit,
+    ValueChanged<Budget> onDelete, ValueChanged<Budget> onView, Brightness brightness) {
   return DataRow(cells: [
     DataCell(Column(mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1258,8 +1211,8 @@ DataRow _budgetRow(_BudgetItem b, ValueChanged<_BudgetItem> onEdit,
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _BudgetCard extends StatelessWidget {
-  final _BudgetItem budget;
-  final ValueChanged<_BudgetItem> onEdit, onDelete, onView;
+  final Budget budget;
+  final ValueChanged<Budget> onEdit, onDelete, onView;
   const _BudgetCard({required this.budget, required this.onEdit,
       required this.onDelete, required this.onView});
 

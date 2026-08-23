@@ -1,16 +1,14 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/colors.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
-import '../../models/app_models.dart';
+import '../../models/promotion.dart';
 import '../../widgets/badges/status_badge.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Local mutable list — mirrors PromotionRepository seed data
+// Data source: PromotionRepository (Supabase-backed).
 // ─────────────────────────────────────────────────────────────────────────────
-final List<Promotion> _promos = List.from(PromotionRepository.getAll());
-int _nextPromoId = _promos.length + 1;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PromotionsScreen
@@ -26,6 +24,12 @@ class _PromotionsScreenState extends State<PromotionsScreen> {
   String _searchQuery = '';
   String _statusFilter = 'All';
   String _typeFilter = 'All';
+
+  /// Working copy of the repository data, refreshed after every mutation so
+  /// setState picks up changes made through [PromotionRepository].
+  List<Promotion> _promos = List.from(PromotionRepository.getAll());
+
+  void _reload() => _promos = List.from(PromotionRepository.getAll());
 
   static const _statuses = ['All', 'Active', 'Draft', 'Paused', 'Completed'];
   static const _types = ['All', 'Percentage', 'Fixed Amount', 'Free Shipping', 'BOGO'];
@@ -281,7 +285,7 @@ class _PromotionsScreenState extends State<PromotionsScreen> {
                               final promo = Promotion(
                                 id: isEdit
                                     ? existing.id
-                                    : 'PR${(_nextPromoId++).toString().padLeft(3, '0')}',
+                                    : PromotionRepository.nextId(),
                                 name: nameCtrl.text.trim(),
                                 type: type,
                                 discount: discLabel,
@@ -298,12 +302,11 @@ class _PromotionsScreenState extends State<PromotionsScreen> {
                               );
                               setState(() {
                                 if (isEdit) {
-                                  final idx =
-                                      _promos.indexWhere((p) => p.id == promo.id);
-                                  if (idx != -1) _promos[idx] = promo;
+                                  PromotionRepository.update(promo);
                                 } else {
-                                  _promos.add(promo);
+                                  PromotionRepository.add(promo);
                                 }
+                                _reload();
                               });
                               Navigator.pop(ctx);
                               _showSnack(isEdit
@@ -350,7 +353,10 @@ class _PromotionsScreenState extends State<PromotionsScreen> {
                 backgroundColor: AppColors.danger,
                 foregroundColor: Colors.white),
             onPressed: () {
-              setState(() => _promos.removeWhere((i) => i.id == p.id));
+              setState(() {
+                PromotionRepository.remove(p.id);
+                _reload();
+              });
               Navigator.pop(ctx);
               _showSnack('Promotion deleted');
             },

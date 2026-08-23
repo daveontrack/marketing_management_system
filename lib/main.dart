@@ -1,11 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'config/supabase_config.dart';
 import 'core/ai_notifier.dart';
 import 'core/theme.dart';
 import 'core/theme_notifier.dart';
 import 'core/routes.dart';
 import 'core/constants.dart';
+import 'models/budget.dart';
+import 'models/campaign.dart';
+import 'models/content_item.dart';
+import 'models/customer.dart';
+import 'models/influencer.dart';
+import 'models/lead.dart';
+import 'models/opportunity.dart';
+import 'models/promotion.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // ── Backend (Supabase) ────────────────────────────────────────────────────
+  // initialize() itself never throws for placeholder credentials; remote
+  // queries fail soft inside the remote stores, so the app falls back to
+  // bundled seed data until real keys are provided in
+  // lib/config/supabase_config.dart.
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
+  );
+
+  // Load all synced modules from the database into their in-memory
+  // repositories before the first screen renders. Falls back to seed data
+  // when offline. Each init() runs once and seeds an empty remote table
+  // automatically on first launch.
+  //
+  // Every init is additionally guarded below so that even if one repository
+  // initialization throws unexpectedly, the remaining repositories still
+  // finish and the app always reaches runApp().
+  Future<void> safeInit(Future<void> Function() init) async {
+    try {
+      await init();
+    } catch (_) {
+      // Fail soft: this module keeps its bundled seed data.
+    }
+  }
+
+  await Future.wait([
+    CampaignRepository.init,
+    CustomerRepository.init,
+    LeadRepository.init,
+    OpportunityRepository.init,
+    BudgetRepository.init,
+    PromotionRepository.init,
+    InfluencerRepository.init,
+    ContentRepository.init,
+  ].map(safeInit));
+
   runApp(const MarketingApp());
 }
 

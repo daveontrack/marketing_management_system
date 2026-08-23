@@ -1,16 +1,10 @@
-﻿// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 import 'package:flutter/material.dart';
 import '../../core/colors.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
-import '../../models/app_models.dart';
+import '../../models/content_item.dart';
 import '../../widgets/badges/status_badge.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Local mutable list — mirrors ContentRepository seed data
-// ─────────────────────────────────────────────────────────────────────────────
-List<ContentItem> _items = List.from(ContentRepository.getAll());
-int _nextId = _items.length + 1;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Display helpers — maps stored status constants to human labels and vice-versa
@@ -55,6 +49,13 @@ class ContentScreen extends StatefulWidget {
 }
 
 class _ContentScreenState extends State<ContentScreen> {
+  // Data source: ContentRepository (Supabase-backed). The local copy below is
+  // rebuilt via [_reload] after every mutation so setState picks up changes
+  // made through [ContentRepository].
+  List<ContentItem> _items = List.from(ContentRepository.getAll());
+
+  void _reload() => _items = List.from(ContentRepository.getAll());
+
   // ── filter state ──────────────────────────────────────────────────────────
   final _searchCtrl = TextEditingController();
   String _typeFilter    = 'All';
@@ -125,7 +126,7 @@ class _ContentScreenState extends State<ContentScreen> {
 
   void _duplicateItem(ContentItem item) {
     final copy = ContentItem(
-      id: 'CN${(_nextId++).toString().padLeft(3, '0')}',
+      id: ContentRepository.nextId(),
       title: '${item.title} (Copy)',
       type: item.type,
       channel: item.channel,
@@ -137,7 +138,10 @@ class _ContentScreenState extends State<ContentScreen> {
       views: 0,
       clicks: 0,
     );
-    setState(() => _items.add(copy));
+    setState(() {
+      ContentRepository.add(copy);
+      _reload();
+    });
     _snack('Content duplicated as draft');
   }
 
@@ -169,7 +173,8 @@ class _ContentScreenState extends State<ContentScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.white, elevation: 0),
               onPressed: () {
-                setState(() => _items.removeWhere((i) => i.id == item.id));
+                ContentRepository.remove(item.id);
+                setState(_reload);
                 Navigator.pop(ctx);
                 _snack('Content deleted');
               },
@@ -488,7 +493,7 @@ class _ContentScreenState extends State<ContentScreen> {
                         onPressed: () {
                           if (!formKey.currentState!.validate()) return;
                           final saved = ContentItem(
-                            id: isEdit ? existing.id : 'CN${(_nextId++).toString().padLeft(3, '0')}',
+                            id: isEdit ? existing.id : ContentRepository.nextId(),
                             title: titleCtrl.text.trim(),
                             type: type,
                             channel: channelCtrl.text.trim().isEmpty ? '—' : channelCtrl.text.trim(),
@@ -502,11 +507,11 @@ class _ContentScreenState extends State<ContentScreen> {
                           );
                           setState(() {
                             if (isEdit) {
-                              final idx = _items.indexWhere((i) => i.id == saved.id);
-                              if (idx != -1) _items[idx] = saved;
+                              ContentRepository.update(saved);
                             } else {
-                              _items.insert(0, saved);
+                              ContentRepository.add(saved);
                             }
+                            _reload();
                           });
                           Navigator.pop(ctx);
                           _snack(isEdit ? 'Content updated' : 'Content created');

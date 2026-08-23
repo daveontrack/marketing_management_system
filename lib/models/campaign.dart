@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../core/colors.dart';
+import '../services/campaign_remote_service.dart';
 
 enum CampaignChannel {
   email,
@@ -185,8 +186,7 @@ class Campaign {
 class CampaignRepository {
   CampaignRepository._();
 
-  static final List<Campaign> _campaigns = [
-    Campaign(
+  static final List<Campaign> _campaigns = [    Campaign(
       id: 'C001',
       name: 'Summer Sale 2026',
       description: 'Boost summer product sales with targeted promotions across digital channels.',
@@ -319,6 +319,30 @@ class CampaignRepository {
     ),
   ];
 
+  static bool _initialized = false;
+
+  /// Loads campaigns from Supabase once at startup (called from main.dart).
+  ///
+  /// Behaviour:
+  ///   • Remote fetch succeeds with rows → local cache is replaced by them.
+  ///   • Remote table is empty           → bundled seed data is pushed to
+  ///                                       Supabase (first-run bootstrap).
+  ///   • Backend unreachable/not set up  → seed data stays in memory and the
+  ///                                       app keeps working offline.
+  static Future<void> init() async {
+    if (_initialized) return;
+    _initialized = true;
+    final remote = await CampaignRemoteService.fetchAll();
+    if (remote == null) return; // offline mode — keep seed data
+    if (remote.isEmpty) {
+      await CampaignRemoteService.seed(_campaigns);
+    } else {
+      _campaigns
+        ..clear()
+        ..addAll(remote);
+    }
+  }
+
   static List<Campaign> getAll() => List.unmodifiable(_campaigns);
 
   static Campaign? findById(String id) {
@@ -331,11 +355,15 @@ class CampaignRepository {
 
   static void update(Campaign updated) {
     final index = _campaigns.indexWhere((c) => c.id == updated.id);
-    if (index != -1) _campaigns[index] = updated;
+    if (index != -1) {
+      _campaigns[index] = updated;
+      CampaignRemoteService.upsert(updated); // fire-and-forget sync
+    }
   }
 
   static void add(Campaign campaign) {
     _campaigns.add(campaign);
+    CampaignRemoteService.upsert(campaign); // fire-and-forget sync
   }
 
   // FIX: new method — mutates the real backing list directly.
@@ -343,6 +371,7 @@ class CampaignRepository {
   // .removeWhere() on its result throws "Unsupported operation: remove".
   static void remove(String id) {
     _campaigns.removeWhere((c) => c.id == id);
+    CampaignRemoteService.delete(id); // fire-and-forget sync
   }
 
   static String nextId() {
