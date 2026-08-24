@@ -5,6 +5,9 @@ import '../../core/constants.dart';
 import '../../core/routes.dart';
 import '../../core/theme.dart';
 import '../../core/theme_notifier.dart';
+import '../../models/user_role_models.dart';
+import '../../widgets/auth/auth_gate.dart';
+import '../auth/user_profile_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AppTopBar
@@ -426,6 +429,7 @@ class _UserAvatarMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
+    final auth = UserProfileProvider.of(context);
     return PopupMenuButton<String>(
       offset: const Offset(0, 48),
       shape: RoundedRectangleBorder(
@@ -435,13 +439,29 @@ class _UserAvatarMenu extends StatelessWidget {
       color: AppTheme.surfaceColor(brightness),
       elevation: 4,
       tooltip: '',
-      onSelected: (route) => onNavigate(route),
+      onSelected: (value) async {
+        if (value == 'signout') {
+          await auth.signOut();
+          // Clear the entire Navigator stack and push a fresh AuthGate.
+          // This prevents back-navigation into authenticated screens.
+          if (context.mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const AuthGate()),
+              (_) => false,
+            );
+          }
+        } else {
+          onNavigate(value);
+        }
+      },
       itemBuilder: (_) => [
         _menuItem(Icons.person_outline,          'Profile',       AppRoutes.profile),
-        _menuItem(Icons.manage_accounts_outlined, 'Users & Roles', AppRoutes.users),
-        _menuItem(Icons.settings_outlined,        'Settings',      AppRoutes.settings),
+        if (auth.hasPermission('Users & Roles', PermissionType.view))
+          _menuItem(Icons.manage_accounts_outlined, 'Users & Roles', AppRoutes.users),
+        if (auth.hasPermission('Settings', PermissionType.view))
+          _menuItem(Icons.settings_outlined,        'Settings',      AppRoutes.settings),
         const PopupMenuDivider(),
-        _menuItem(Icons.logout, 'Sign out', AppRoutes.login,
+        _menuItem(Icons.logout, 'Sign out', 'signout',
             color: AppColors.danger),
       ],
       child: _AvatarChip(),
@@ -487,6 +507,11 @@ class _AvatarChipState extends State<_AvatarChip> {
     final textSec     = AppTheme.textSecondary(brightness);
     final isCompact   = MediaQuery.of(context).size.width < AppConstants.mobileBreakpoint;
 
+    final auth       = UserProfileProvider.of(context);
+    final userName   = auth.currentName;
+    final userRole   = UserRoleRepository.roleDisplayName(auth.currentRole);
+    final userInitials = auth.currentInitials;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit:  (_) => setState(() => _hovered = false),
@@ -504,9 +529,9 @@ class _AvatarChipState extends State<_AvatarChip> {
             CircleAvatar(
               radius: 15,
               backgroundColor: AppColors.primaryLight,
-              child: const Text(
-                'HT',
-                style: TextStyle(
+              child: Text(
+                userInitials,
+                style: const TextStyle(
                   color: AppColors.primary,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -521,7 +546,7 @@ class _AvatarChipState extends State<_AvatarChip> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hana Tsegaye',
+                    userName,
                     style: TextStyle(
                       color: textPrimary,
                       fontSize: 12,
@@ -529,7 +554,7 @@ class _AvatarChipState extends State<_AvatarChip> {
                     ),
                   ),
                   Text(
-                    AppConstants.roleMarketingManager,
+                    userRole,
                     style: TextStyle(color: textSec, fontSize: 10),
                   ),
                 ],

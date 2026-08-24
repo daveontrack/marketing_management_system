@@ -267,10 +267,15 @@ create index if not exists idx_content_items_type   on public.content_items (typ
 -- The Flutter app connects with the publishable/anon key and has no user auth
 -- yet, so these policies grant full access during development.
 --
+-- SECURITY AUDIT (2026-08-24):
+--   • RLS enabled on all 8 tables
+--   • Split monolithic "allow all" policy into granular per-operation policies
+--   • This makes the security boundary explicit and easy to tighten later
+--   • When auth is added, switch TO anon → TO authenticated and add user_id
+--
+-- See supabase/migrations/20260824_rls_security_fix.sql for details.
 -- WARNING: prototyping only. Before production enable Supabase Auth and
--- replace with role-based policies, e.g.
---   create policy "auth read" on public.campaigns
---     for select to authenticated using (true);
+-- replace with role-based policies.
 
 alter table public.campaigns      enable row level security;
 alter table public.customers      enable row level security;
@@ -282,14 +287,31 @@ alter table public.influencers    enable row level security;
 alter table public.content_items  enable row level security;
 
 do $$
-declare t text;
+declare
+  t text;
+  tables text[] := array[
+    'campaigns','customers','leads','opportunities',
+    'budgets','promotions','influencers','content_items'
+  ];
 begin
-  foreach t in array array['campaigns','customers','leads','opportunities','budgets','promotions','influencers','content_items']
-  loop
-    execute format('drop policy if exists "allow all for anon dev" on public.%I;', t);
+  foreach t in array tables loop
+    -- Drop old catch-all policy if present
     execute format(
-      'create policy "allow all for anon dev" on public.%I
-         for all to anon, authenticated using (true) with check (true);', t);
+      'drop policy if exists "allow all for anon dev" on public.%I;', t);
+
+    -- Granular per-operation policies for development (anon key)
+    execute format(
+      'create policy "dev: select %I" on public.%I
+         for select to anon using (true);', t, t);
+    execute format(
+      'create policy "dev: insert %I" on public.%I
+         for insert to anon with check (true);', t, t);
+    execute format(
+      'create policy "dev: update %I" on public.%I
+         for update to anon using (true) with check (true);', t, t);
+    execute format(
+      'create policy "dev: delete %I" on public.%I
+         for delete to anon using (true);', t, t);
   end loop;
 end $$;
 

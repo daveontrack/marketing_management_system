@@ -3,6 +3,9 @@ import '../../core/colors.dart';
 import '../../core/constants.dart';
 import '../../core/routes.dart';
 import '../../core/theme.dart';
+import '../../models/user_role_models.dart';
+import '../../services/auth_service.dart';
+import '../auth/user_profile_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data model for a single sidebar navigation item
@@ -67,12 +70,30 @@ class AppSidebar extends StatelessWidget {
   // ── collapsed rail width ─────────────────────────────────────────────────
   static const double railWidth = 64.0;
 
+  /// Returns the visible nav items filtered by the user's permissions.
+  List<_NavItem> _visibleItems(
+    List<_NavItem> items,
+    AuthService auth,
+  ) {
+    return items.where((item) {
+      // Dashboard is always visible.
+      if (item.route == AppRoutes.dashboard) return true;
+      return auth.hasPermission(item.label, PermissionType.view);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final brightness  = Theme.of(context).brightness;
     final bgColor     = AppTheme.sidebarBg(brightness);
     final divColor    = AppTheme.divider(brightness);
     final borderColor = AppTheme.border(brightness);
+    final auth        = UserProfileProvider.of(context);
+    final mainItems   = _visibleItems(_mainNavItems, auth);
+    final bottomItems = _visibleItems(_bottomNavItems, auth);
+    final userName    = auth.currentName;
+    final userRole    = UserRoleRepository.roleDisplayName(auth.currentRole);
+    final userInitials = auth.currentInitials;
 
     // In collapsed mode render a compact icon-only rail.
     if (collapsed && !isDrawer) {
@@ -111,31 +132,37 @@ class AppSidebar extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
-                  ..._mainNavItems.map((item) => _RailIcon(
+                  ...mainItems.map((item) => _RailIcon(
                         item: item,
                         isActive: currentRoute == item.route,
                         onTap: () => onNavigate(item.route),
                       )),
-                  const SizedBox(height: 4),
-                  Divider(thickness: 1, color: divColor, indent: 12, endIndent: 12),
-                  ..._bottomNavItems.map((item) => _RailIcon(
-                        item: item,
-                        isActive: currentRoute == item.route,
-                        onTap: () => onNavigate(item.route),
-                      )),
+                  if (bottomItems.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Divider(thickness: 1, color: divColor, indent: 12, endIndent: 12),
+                    ...bottomItems.map((item) => _RailIcon(
+                          item: item,
+                          isActive: currentRoute == item.route,
+                          onTap: () => onNavigate(item.route),
+                        )),
+                  ],
                 ],
               ),
             ),
 
             // User avatar only
             Divider(height: 1, thickness: 1, color: divColor),
-            _RailUserIcon(onTap: () => onNavigate(AppRoutes.profile)),
+            _RailUserIcon(
+              onTap: () => onNavigate(AppRoutes.profile),
+              userName: userName,
+              userInitials: userInitials,
+            ),
           ],
         ),
       );
     }
 
-    // ── Full expanded sidebar (unchanged behaviour) ─────────────────────────
+    // ── Full expanded sidebar ───────────────────────────────────────────────
     final content = Container(
       width: AppConstants.sidebarWidth,
       color: bgColor,
@@ -148,30 +175,37 @@ class AppSidebar extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                ..._mainNavItems.map(
+                ...mainItems.map(
                   (item) => _NavTile(
                     item: item,
                     isActive: currentRoute == item.route,
                     onTap: () => onNavigate(item.route),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Divider(thickness: 1, color: divColor),
-                ),
-                ..._bottomNavItems.map(
-                  (item) => _NavTile(
-                    item: item,
-                    isActive: currentRoute == item.route,
-                    onTap: () => onNavigate(item.route),
+                if (bottomItems.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: Divider(thickness: 1, color: divColor),
                   ),
-                ),
+                  ...bottomItems.map(
+                    (item) => _NavTile(
+                      item: item,
+                      isActive: currentRoute == item.route,
+                      onTap: () => onNavigate(item.route),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
           Divider(height: 1, thickness: 1, color: divColor),
-          _SidebarUserCard(onTap: () => onNavigate(AppRoutes.profile)),
+          _SidebarUserCard(
+            onTap: () => onNavigate(AppRoutes.profile),
+            userName: userName,
+            userRole: userRole,
+            userInitials: userInitials,
+          ),
         ],
       ),
     );
@@ -352,7 +386,15 @@ class _NavTileState extends State<_NavTile> {
 
 class _SidebarUserCard extends StatefulWidget {
   final VoidCallback onTap;
-  const _SidebarUserCard({required this.onTap});
+  final String userName;
+  final String userRole;
+  final String userInitials;
+  const _SidebarUserCard({
+    required this.onTap,
+    required this.userName,
+    required this.userRole,
+    required this.userInitials,
+  });
 
   @override
   State<_SidebarUserCard> createState() => _SidebarUserCardState();
@@ -384,9 +426,9 @@ class _SidebarUserCardState extends State<_SidebarUserCard> {
               CircleAvatar(
                 radius: 16,
                 backgroundColor: AppColors.primaryLight,
-                child: const Text(
-                  'HT',
-                  style: TextStyle(
+                child: Text(
+                  widget.userInitials,
+                  style: const TextStyle(
                     color: AppColors.primary,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -399,7 +441,7 @@ class _SidebarUserCardState extends State<_SidebarUserCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Hana Tsegaye',
+                      widget.userName,
                       style: TextStyle(
                         color: textPrimary,
                         fontSize: 12,
@@ -408,7 +450,7 @@ class _SidebarUserCardState extends State<_SidebarUserCard> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      AppConstants.roleMarketingManager,
+                      widget.userRole,
                       style: TextStyle(
                         color: textSec,
                         fontSize: 10,
@@ -461,7 +503,9 @@ class _RailIconState extends State<_RailIcon> {
     Color bgColor = Colors.transparent;
     if (active) {
       bgColor = activeBg;
-    } else if (_hovered)  bgColor = hoverBg;
+    } else if (_hovered) {
+      bgColor = hoverBg;
+    }
 
     final iconColor = active
         ? AppColors.sidebarActiveText
@@ -529,7 +573,13 @@ class _RailIconState extends State<_RailIcon> {
 
 class _RailUserIcon extends StatefulWidget {
   final VoidCallback onTap;
-  const _RailUserIcon({required this.onTap});
+  final String userName;
+  final String userInitials;
+  const _RailUserIcon({
+    required this.onTap,
+    required this.userName,
+    required this.userInitials,
+  });
 
   @override
   State<_RailUserIcon> createState() => _RailUserIconState();
@@ -545,7 +595,7 @@ class _RailUserIconState extends State<_RailUserIcon> {
     final hoverBg    = isDark ? const Color(0xFF211F35) : AppColors.sidebarHover;
 
     return Tooltip(
-      message: 'Profile',
+      message: widget.userName,
       child: MouseRegion(
         onEnter: (_) => setState(() => _hovered = true),
         onExit:  (_) => setState(() => _hovered = false),
@@ -560,9 +610,9 @@ class _RailUserIconState extends State<_RailUserIcon> {
               child: CircleAvatar(
                 radius: 16,
                 backgroundColor: AppColors.primaryLight,
-                child: const Text(
-                  'HT',
-                  style: TextStyle(
+                child: Text(
+                  widget.userInitials,
+                  style: const TextStyle(
                     color: AppColors.primary,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,

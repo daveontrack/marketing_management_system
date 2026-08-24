@@ -169,18 +169,20 @@ class CampaignRemoteService {
         'description': a.description,
         'date': a.date,
         'iconCode': a.icon.codePoint,
-        'iconColorValue': a.iconColor.value,
+        'iconColorValue': a.iconColor.toARGB32(),
       };
 
   static CampaignActivity _activityFromJson(Map<String, dynamic> json) {
     final code = _toInt(json['iconCode']);
     final colorValue = _toInt(json['iconColorValue']);
+    final icon = code != 0
+        // ignore: non_const_argument_for_const_parameter
+        ? IconData(code, fontFamily: 'MaterialIcons')
+        : Icons.flag_outlined;
     return CampaignActivity(
       description: json['description']?.toString() ?? '',
       date: json['date']?.toString() ?? '',
-      icon: code != 0
-          ? IconData(code, fontFamily: 'MaterialIcons')
-          : Icons.flag_outlined,
+      icon: icon,
       iconColor: colorValue != 0 ? Color(colorValue) : AppColors.primary,
     );
   }

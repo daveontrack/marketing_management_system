@@ -1,6 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import '../../core/colors.dart';
-import '../../core/routes.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_textfield.dart';
 
@@ -33,8 +33,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Mock validation — any non-empty email and password is acceptable,
-  // but we still keep light sanity checks (frontend-only).
   String? _validateEmail(String? v) {
     if (v == null || v.trim().isEmpty) return 'Email is required';
     final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+');
@@ -53,14 +51,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // Mock authentication delay (frontend-only, no backend).
-    await Future.delayed(const Duration(milliseconds: 900));
+    try {
+      await AuthService().signIn(
+        email: _emailCtrl.text,
+        password: _passwordCtrl.text,
+      );
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    // Any non-empty credentials succeed → open Dashboard inside AppLayout.
-    Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+      if (!mounted) return;
+      // Profile loaded successfully — role and status are valid.
+      // AuthGate listens to onAuthStateChange and will automatically
+      // rebuild to show the authenticated shell. No manual navigation needed.
+      setState(() => _isLoading = false);
+    } on AppAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.message;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Unable to connect to the server. Please check your internet connection.';
+      });
+    }
   }
 
   @override

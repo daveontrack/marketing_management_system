@@ -1243,10 +1243,10 @@ class _DetailSheet extends StatelessWidget {
             const SizedBox(height: 20),
             Divider(color: divCol),
             const SizedBox(height: 12),
-            _DetailRow(icon: Icons.email_outlined,          label: 'Email',         value: customer.email, textPri: textPri, textSec: textSec),
-            _DetailRow(icon: Icons.phone_outlined,           label: 'Phone',         value: customer.phone, textPri: textPri, textSec: textSec),
-            _DetailRow(icon: Icons.calendar_today_outlined,  label: 'Joined',        value: joinedStr,       textPri: textPri, textSec: textSec),
-            _DetailRow(icon: Icons.update_outlined,          label: 'Last Activity', value: actStr,          textPri: textPri, textSec: textSec),
+            _detailRow(icon: Icons.email_outlined,          label: 'Email',         value: customer.email, textPri: textPri, textSec: textSec),
+            _detailRow(icon: Icons.phone_outlined,           label: 'Phone',         value: customer.phone, textPri: textPri, textSec: textSec),
+            _detailRow(icon: Icons.calendar_today_outlined,  label: 'Joined',        value: joinedStr,       textPri: textPri, textSec: textSec),
+            _detailRow(icon: Icons.update_outlined,          label: 'Last Activity', value: actStr,          textPri: textPri, textSec: textSec),
             const SizedBox(height: 8),
           ],
         ),
@@ -1254,7 +1254,7 @@ class _DetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _DetailRow({required IconData icon, required String label, required String value, required Color textPri, required Color textSec}) {
+  Widget _detailRow({required IconData icon, required String label, required String value, required Color textPri, required Color textSec}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(children: [

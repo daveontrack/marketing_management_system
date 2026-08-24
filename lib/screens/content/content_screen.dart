@@ -1348,7 +1348,6 @@ class _MobileCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final br   = Theme.of(context).brightness;
-    final bord = AppTheme.border(br);
     final div  = AppTheme.divider(br);
 
     return Column(children: items.asMap().entries.map((e) {

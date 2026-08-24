@@ -550,18 +550,18 @@ class CampaignDetailsDialog extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _DetailRow('Status',          campaign.status,                                         textPri, textSec),
-                    _DetailRow('Objective',        campaign.objective.label,                               textPri, textSec),
-                    _DetailRow('Description',      campaign.description,                                   textPri, textSec),
-                    _DetailRow('Target Audience',  campaign.targetAudience.isNotEmpty ? campaign.targetAudience : '-', textPri, textSec),
-                    _DetailRow('Channels',         campaign.channels.map((c) => c.label).join(', '),       textPri, textSec),
-                    _DetailRow('Start Date',       campaign.startDate != null ? _fmtDate(campaign.startDate!) : '-', textPri, textSec),
-                    _DetailRow('End Date',         campaign.endDate   != null ? _fmtDate(campaign.endDate!)   : '-', textPri, textSec),
-                    _DetailRow('Budget',           'ETB ${campaign.budget.toStringAsFixed(0)}',            textPri, textSec),
-                    _DetailRow('Spent',            'ETB ${campaign.spent.toStringAsFixed(0)}',             textPri, textSec),
-                    _DetailRow('ROI',              '${campaign.roi}x',                                     textPri, textSec),
+                    _detailRow('Status',          campaign.status,                                         textPri, textSec),
+                    _detailRow('Objective',        campaign.objective.label,                               textPri, textSec),
+                    _detailRow('Description',      campaign.description,                                   textPri, textSec),
+                    _detailRow('Target Audience',  campaign.targetAudience.isNotEmpty ? campaign.targetAudience : '-', textPri, textSec),
+                    _detailRow('Channels',         campaign.channels.map((c) => c.label).join(', '),       textPri, textSec),
+                    _detailRow('Start Date',       campaign.startDate != null ? _fmtDate(campaign.startDate!) : '-', textPri, textSec),
+                    _detailRow('End Date',         campaign.endDate   != null ? _fmtDate(campaign.endDate!)   : '-', textPri, textSec),
+                    _detailRow('Budget',           'ETB ${campaign.budget.toStringAsFixed(0)}',            textPri, textSec),
+                    _detailRow('Spent',            'ETB ${campaign.spent.toStringAsFixed(0)}',             textPri, textSec),
+                    _detailRow('ROI',              '${campaign.roi}x',                                     textPri, textSec),
                     if (campaign.notes.isNotEmpty)
-                      _DetailRow('Notes', campaign.notes, textPri, textSec),
+                      _detailRow('Notes', campaign.notes, textPri, textSec),
                   ],
                 ),
               ),
@@ -594,7 +594,7 @@ class CampaignDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _DetailRow(String label, String value, Color textPri, Color textSec) {
+  Widget _detailRow(String label, String value, Color textPri, Color textSec) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(

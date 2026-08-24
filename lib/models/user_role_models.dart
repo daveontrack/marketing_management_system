@@ -283,7 +283,7 @@ class UserRoleRepository {
 
   // --- permission matrix for Administrator (demo) ---
   static List<ModulePermission> getAdminPermissions() => [
-    ModulePermission(module: 'Dashboard', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Dashboard', view: true, create: true, edit: true, delete: true),
     ModulePermission(module: 'Campaigns', view: true, create: true, edit: true, delete: true),
     ModulePermission(module: 'Customers', view: true, create: true, edit: true, delete: true),
     ModulePermission(module: 'Leads', view: true, create: true, edit: true, delete: true),
@@ -295,7 +295,7 @@ class UserRoleRepository {
     ModulePermission(module: 'Communications', view: true, create: true, edit: true, delete: true),
     ModulePermission(module: 'Automation', view: true, create: true, edit: true, delete: true),
     ModulePermission(module: 'Reports', view: true, create: true, edit: true, delete: true),
-    ModulePermission(module: 'Notifications', view: true, create: true, edit: false, delete: true),
+    ModulePermission(module: 'Notifications', view: true, create: true, edit: true, delete: true),
     ModulePermission(module: 'Users & Roles', view: true, create: true, edit: true, delete: true),
     ModulePermission(module: 'Profile', view: true, create: false, edit: true, delete: false),
     ModulePermission(module: 'Settings', view: true, create: false, edit: true, delete: false),
@@ -312,8 +312,8 @@ class UserRoleRepository {
     ModulePermission(module: 'Promotions', view: true, create: true, edit: true, delete: false),
     ModulePermission(module: 'Budget', view: true, create: false, edit: false, delete: false),
     ModulePermission(module: 'Communications', view: true, create: true, edit: true, delete: false),
-    ModulePermission(module: 'Automation', view: true, create: false, edit: false, delete: false),
-    ModulePermission(module: 'Reports', view: true, create: true, edit: false, delete: false),
+    ModulePermission(module: 'Automation', view: true, create: true, edit: true, delete: false),
+    ModulePermission(module: 'Reports', view: true, create: false, edit: false, delete: false),
     ModulePermission(module: 'Notifications', view: true, create: false, edit: false, delete: false),
     ModulePermission(module: 'Users & Roles', view: true, create: false, edit: false, delete: false),
     ModulePermission(module: 'Profile', view: true, create: false, edit: true, delete: false),
@@ -338,6 +338,104 @@ class UserRoleRepository {
     ModulePermission(module: 'Profile', view: true, create: false, edit: true, delete: false),
     ModulePermission(module: 'Settings', view: false, create: false, edit: false, delete: false),
   ];
+
+  static List<ModulePermission> getStaffPermissions() => [
+    ModulePermission(module: 'Dashboard', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Campaigns', view: true, create: true, edit: true, delete: false),
+    ModulePermission(module: 'Customers', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Leads', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Opportunities', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Influencers', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Content', view: true, create: true, edit: true, delete: false),
+    ModulePermission(module: 'Promotions', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Budget', view: false, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Communications', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Automation', view: false, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Reports', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Notifications', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Users & Roles', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Profile', view: true, create: false, edit: true, delete: false),
+    ModulePermission(module: 'Settings', view: false, create: false, edit: false, delete: false),
+  ];
+
+  static List<ModulePermission> getAnalystPermissions() => [
+    ModulePermission(module: 'Dashboard', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Campaigns', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Customers', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Leads', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Opportunities', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Influencers', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Content', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Promotions', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Budget', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Communications', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Automation', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Reports', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Notifications', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Users & Roles', view: true, create: false, edit: false, delete: false),
+    ModulePermission(module: 'Profile', view: true, create: false, edit: true, delete: false),
+    ModulePermission(module: 'Settings', view: false, create: false, edit: false, delete: false),
+  ];
+
+  /// Returns the correct permission matrix for a given database role string.
+  static List<ModulePermission> getPermissionsForRole(String role) {
+    switch (role) {
+      case 'admin':
+        return getAdminPermissions();
+      case 'marketing_manager':
+        return getManagerPermissions();
+      case 'marketing_staff':
+        return getStaffPermissions();
+      case 'analyst':
+        return getAnalystPermissions();
+      case 'viewer':
+        return getViewerPermissions();
+      default:
+        return getViewerPermissions();
+    }
+  }
+
+  // ── Centralized permission helpers ──────────────────────────────────────
+
+  /// Check if [role] can view [module].
+  static bool canView(String role, String module) =>
+      _hasPermission(role, module, (p) => p.view);
+
+  /// Check if [role] can create in [module].
+  static bool canCreate(String role, String module) =>
+      _hasPermission(role, module, (p) => p.create);
+
+  /// Check if [role] can edit [module].
+  static bool canEdit(String role, String module) =>
+      _hasPermission(role, module, (p) => p.edit);
+
+  /// Check if [role] can delete from [module].
+  static bool canDelete(String role, String module) =>
+      _hasPermission(role, module, (p) => p.delete);
+
+  static bool _hasPermission(
+    String role,
+    String module,
+    bool Function(ModulePermission) check,
+  ) {
+    final permissions = getPermissionsForRole(role);
+    for (final p in permissions) {
+      if (p.module == module) return check(p);
+    }
+    return false;
+  }
+
+  /// Maps a database role string to the display role name used in the UI.
+  static String roleDisplayName(String role) {
+    switch (role) {
+      case 'admin':             return 'Administrator';
+      case 'marketing_manager': return 'Marketing Manager';
+      case 'marketing_staff':   return 'Marketing Staff';
+      case 'analyst':           return 'Analyst';
+      case 'viewer':            return 'Viewer';
+      default:                  return role;
+    }
+  }
 
   // --- recent activity ---
   static const List<ActivityEntry> recentActivity = [

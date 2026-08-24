@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/layout/app_layout.dart';
 import '../core/constants.dart';
-import '../screens/auth/splash_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/campaigns/campaign_list_screen.dart';
 import '../screens/campaigns/campaign_details_screen.dart';
@@ -88,10 +87,10 @@ class AppRoutes {
   static const String settings = '/settings';
 
   // ── Route table ───────────────────────────────────────────────────────────
+  // NOTE: '/' (splash) is NOT in this map because MaterialApp.home is set
+  // to AuthGate. Flutter forbids having both `home` and a '/' route entry.
   static Map<String, WidgetBuilder> get routes {
     return {
-      // Auth
-      splash: (_) => const SplashScreen(),
       login: (_) => const LoginScreen(),
 
       // Dashboard — real dashboard inside AppLayout

@@ -14,6 +14,7 @@ import 'models/influencer.dart';
 import 'models/lead.dart';
 import 'models/opportunity.dart';
 import 'models/promotion.dart';
+import 'widgets/auth/auth_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +26,7 @@ Future<void> main() async {
   // lib/config/supabase_config.dart.
   await Supabase.initialize(
     url: SupabaseConfig.url,
-    anonKey: SupabaseConfig.anonKey,
+    publishableKey: SupabaseConfig.anonKey,
   );
 
   // Load all synced modules from the database into their in-memory
@@ -103,7 +104,7 @@ class _MarketingAppState extends State<MarketingApp> {
               theme: AppTheme.light,
               darkTheme: AppTheme.dark,
               themeMode: _themeNotifier.mode,
-              initialRoute: AppRoutes.splash,
+              home: const AuthGate(),
               routes: AppRoutes.routes,
             );
           },
