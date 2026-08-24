@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'core/ai_notifier.dart';
@@ -20,6 +21,10 @@ import 'widgets/auth/user_profile_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load .env file for local development (ignored in production builds
+  // that use --dart-define).
+  await dotenv.load();
 
   // ── Backend (Supabase) ────────────────────────────────────────────────────
   // initialize() itself never throws for placeholder credentials; remote

@@ -165,19 +165,132 @@ class CampaignRemoteService {
 
   // ── Activities ────────────────────────────────────────────────────────────
 
+  // Map of icon names to const IconData for deserialization
+  static const Map<String, IconData> _iconLookup = {
+    'rocket_launch_outlined': Icons.rocket_launch_outlined,
+    'share_outlined': Icons.share_outlined,
+    'check_circle_outline': Icons.check_circle_outline,
+    'email_outlined': Icons.email_outlined,
+    'pause_circle_outline': Icons.pause_circle_outline,
+    'flag_outlined': Icons.flag_outlined,
+    'campaign_outlined': Icons.campaign_outlined,
+    'trending_up': Icons.trending_up,
+    'visibility': Icons.visibility,
+    'edit': Icons.edit,
+    'delete': Icons.delete,
+    'add': Icons.add,
+    'star': Icons.star,
+    'star_outline': Icons.star_outline,
+    'bolt': Icons.bolt,
+    'group': Icons.group,
+    'group_add': Icons.group_add,
+    'analytics': Icons.analytics,
+    'insights': Icons.insights,
+    'storefront': Icons.storefront,
+    'shopping_cart': Icons.shopping_cart,
+    'payments': Icons.payments,
+    'local_offer': Icons.local_offer,
+    'bookmark': Icons.bookmark,
+    'bookmark_border': Icons.bookmark_border,
+    'notifications': Icons.notifications,
+    'notifications_none': Icons.notifications_none,
+    'settings': Icons.settings,
+    'refresh': Icons.refresh,
+    'filter_list': Icons.filter_list,
+    'sort': Icons.sort,
+    'calendar_today': Icons.calendar_today,
+    'date_range': Icons.date_range,
+    'location_on': Icons.location_on,
+    'language': Icons.language,
+    'public': Icons.public,
+    'link': Icons.link,
+    'share': Icons.share,
+    'cloud_upload': Icons.cloud_upload,
+    'cloud_download': Icons.cloud_download,
+    'download': Icons.download,
+    'upload': Icons.upload,
+    'info': Icons.info,
+    'info_outline': Icons.info_outline,
+    'help_outline': Icons.help_outline,
+    'warning': Icons.warning,
+    'error': Icons.error,
+    'check': Icons.check,
+    'close': Icons.close,
+    'arrow_back': Icons.arrow_back,
+    'arrow_forward': Icons.arrow_forward,
+    'chevron_left': Icons.chevron_left,
+    'chevron_right': Icons.chevron_right,
+    'expand_more': Icons.expand_more,
+    'expand_less': Icons.expand_less,
+    'menu': Icons.menu,
+    'more_vert': Icons.more_vert,
+    'search': Icons.search,
+    'clear': Icons.clear,
+    'home': Icons.home,
+    'dashboard': Icons.dashboard,
+    'bar_chart': Icons.bar_chart,
+    'pie_chart': Icons.pie_chart,
+    'show_chart': Icons.show_chart,
+    'multiline_chart': Icons.multiline_chart,
+    'stacked_line_chart': Icons.stacked_line_chart,
+  };
+
+  static String _iconToName(IconData icon) {
+    // Match by codePoint against known const IconData values
+    if (icon.codePoint == Icons.rocket_launch_outlined.codePoint) return 'rocket_launch_outlined';
+    if (icon.codePoint == Icons.share_outlined.codePoint) return 'share_outlined';
+    if (icon.codePoint == Icons.check_circle_outline.codePoint) return 'check_circle_outline';
+    if (icon.codePoint == Icons.email_outlined.codePoint) return 'email_outlined';
+    if (icon.codePoint == Icons.pause_circle_outline.codePoint) return 'pause_circle_outline';
+    if (icon.codePoint == Icons.flag_outlined.codePoint) return 'flag_outlined';
+    if (icon.codePoint == Icons.campaign_outlined.codePoint) return 'campaign_outlined';
+    if (icon.codePoint == Icons.trending_up.codePoint) return 'trending_up';
+    if (icon.codePoint == Icons.visibility.codePoint) return 'visibility';
+    if (icon.codePoint == Icons.edit.codePoint) return 'edit';
+    if (icon.codePoint == Icons.delete.codePoint) return 'delete';
+    if (icon.codePoint == Icons.add.codePoint) return 'add';
+    if (icon.codePoint == Icons.star.codePoint) return 'star';
+    if (icon.codePoint == Icons.star_outline.codePoint) return 'star_outline';
+    if (icon.codePoint == Icons.bolt.codePoint) return 'bolt';
+    if (icon.codePoint == Icons.group.codePoint) return 'group';
+    if (icon.codePoint == Icons.group_add.codePoint) return 'group_add';
+    if (icon.codePoint == Icons.analytics.codePoint) return 'analytics';
+    if (icon.codePoint == Icons.insights.codePoint) return 'insights';
+    if (icon.codePoint == Icons.storefront.codePoint) return 'storefront';
+    if (icon.codePoint == Icons.shopping_cart.codePoint) return 'shopping_cart';
+    if (icon.codePoint == Icons.payments.codePoint) return 'payments';
+    if (icon.codePoint == Icons.local_offer.codePoint) return 'local_offer';
+    if (icon.codePoint == Icons.info.codePoint) return 'info';
+    if (icon.codePoint == Icons.info_outline.codePoint) return 'info_outline';
+    if (icon.codePoint == Icons.warning.codePoint) return 'warning';
+    if (icon.codePoint == Icons.check.codePoint) return 'check';
+    if (icon.codePoint == Icons.close.codePoint) return 'close';
+    if (icon.codePoint == Icons.search.codePoint) return 'search';
+    if (icon.codePoint == Icons.home.codePoint) return 'home';
+    if (icon.codePoint == Icons.dashboard.codePoint) return 'dashboard';
+    if (icon.codePoint == Icons.bar_chart.codePoint) return 'bar_chart';
+    if (icon.codePoint == Icons.pie_chart.codePoint) return 'pie_chart';
+    if (icon.codePoint == Icons.show_chart.codePoint) return 'show_chart';
+    if (icon.codePoint == Icons.multiline_chart.codePoint) return 'multiline_chart';
+    if (icon.codePoint == Icons.stacked_line_chart.codePoint) return 'stacked_line_chart';
+    if (icon.codePoint == Icons.calendar_today.codePoint) return 'calendar_today';
+    if (icon.codePoint == Icons.date_range.codePoint) return 'date_range';
+    return 'flag_outlined';
+  }
+
   static Map<String, dynamic> _activityToJson(CampaignActivity a) => {
         'description': a.description,
         'date': a.date,
-        'iconCode': a.icon.codePoint,
+        'iconName': _iconToName(a.icon),
         'iconColorValue': a.iconColor.toARGB32(),
       };
 
   static CampaignActivity _activityFromJson(Map<String, dynamic> json) {
-    final code = _toInt(json['iconCode']);
+    // Support both new 'iconName' and legacy 'iconCode' formats
+    String? iconName = json['iconName']?.toString();
     final colorValue = _toInt(json['iconColorValue']);
-    final icon = code != 0
-        // ignore: non_const_argument_for_const_parameter
-        ? IconData(code, fontFamily: 'MaterialIcons')
+    final icon = (iconName != null && _iconLookup.containsKey(iconName))
+        ? _iconLookup[iconName]!
         : Icons.flag_outlined;
     return CampaignActivity(
       description: json['description']?.toString() ?? '',
