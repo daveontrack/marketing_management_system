@@ -42,16 +42,6 @@ flutter pub get
 flutter run -d chrome
 ```
 
-## Test Accounts
-
-| Email | Password | Role |
-|-------|----------|------|
-| biruk.alemu@marketflow.et | Biruk@Admin2026! | Administrator |
-| hana.tsegaye@marketflow.et | Hana@Manager2026! | Marketing Manager |
-| robel.tesfaye@marketflow.et | Robel@Staff2026! | Marketing Staff |
-| tigist.bekele@marketflow.et | Tigist@Analyst2026! | Analyst |
-| selamawit.girma@marketflow.et | Selam@Viewer2026! | Viewer |
-
 ## Project Structure
 
 ```
