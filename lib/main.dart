@@ -14,7 +14,9 @@ import 'models/influencer.dart';
 import 'models/lead.dart';
 import 'models/opportunity.dart';
 import 'models/promotion.dart';
+import 'services/auth_service.dart';
 import 'widgets/auth/auth_gate.dart';
+import 'widgets/auth/user_profile_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -106,6 +108,15 @@ class _MarketingAppState extends State<MarketingApp> {
               themeMode: _themeNotifier.mode,
               home: const AuthGate(),
               routes: AppRoutes.routes,
+              // UserProfileProvider must be placed INSIDE the Navigator so
+              // every route can find it via context. The builder callback
+              // receives the Navigator's context, not MaterialApp's parent.
+              builder: (context, child) {
+                return UserProfileProvider(
+                  authService: AuthService(),
+                  child: child!,
+                );
+              },
             );
           },
         ),

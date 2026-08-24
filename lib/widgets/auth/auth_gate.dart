@@ -21,7 +21,6 @@ import '../../core/routes.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../services/auth_service.dart';
 import '../layout/app_layout.dart';
-import 'user_profile_provider.dart';
 import '../../core/constants.dart';
 import '../../screens/dashboard/dashboard_screen.dart';
 
@@ -95,17 +94,14 @@ class _AuthGateState extends State<AuthGate> {
       return const LoginScreen();
     }
 
-    // Authenticated with an active profile — show the main application shell
-    // wrapped in UserProfileProvider so descendant widgets (sidebar, topbar,
-    // etc.) can access the current user's profile synchronously.
-    return UserProfileProvider(
-      authService: auth,
-      child: AppLayoutPage(
-        route: AppRoutes.dashboard,
-        title: AppConstants.navDashboard,
-        isDashboard: true,
-        child: const DashboardScreen(),
-      ),
+    // Authenticated with an active profile — show the main application shell.
+    // UserProfileProvider is already above MaterialApp (set up in main.dart),
+    // so all routes—including sidebar & topbar—can access the user profile.
+    return AppLayoutPage(
+      route: AppRoutes.dashboard,
+      title: AppConstants.navDashboard,
+      isDashboard: true,
+      child: const DashboardScreen(),
     );
   }
 }

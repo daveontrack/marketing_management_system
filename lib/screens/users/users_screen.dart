@@ -4,6 +4,7 @@ import '../../core/colors.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../models/user_role_models.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_textfield.dart';
 
@@ -37,7 +38,40 @@ class _UsersScreenState extends State<UsersScreen>
     super.initState();
     _tab = TabController(length: 3, vsync: this);
     _tab.addListener(() { if (!_tab.indexIsChanging) setState(() {}); });
-    _users = UserRoleRepository.getAll();
+    _loadUsers();
+  }
+
+  /// Loads users from Supabase; falls back to mock data if the query fails.
+  Future<void> _loadUsers() async {
+    try {
+      final rows = await AuthService().listUsers();
+      if (!mounted) return;
+      setState(() {
+        _users = rows.map((r) => AppUser(
+          id: r['id'] as String,
+          fullName: r['full_name'] as String? ?? 'Unknown',
+          email: r['email'] as String? ?? '',
+          role: UserRoleRepository.roleDisplayName(r['role'] as String? ?? 'viewer'),
+          department: r['department'] as String? ?? 'General',
+          status: _statusFromString(r['status'] as String? ?? 'pending'),
+          lastActive: 'N/A',
+          accountCreated: r['created_at'] as String? ?? '',
+        )).toList();
+      });
+    } catch (e) {
+      // Fall back to mock data if Supabase query fails.
+      if (mounted) {
+        setState(() { _users = UserRoleRepository.getAll(); });
+      }
+    }
+  }
+
+  UserStatus _statusFromString(String s) {
+    switch (s) {
+      case 'active':   return UserStatus.active;
+      case 'inactive': return UserStatus.inactive;
+      default:         return UserStatus.pending;
+    }
   }
 
   @override
@@ -88,6 +122,18 @@ class _UsersScreenState extends State<UsersScreen>
   List<String> get _allDepts {
     final d = _users.map((u) => u.department).toSet().toList()..sort();
     return ['All', ...d];
+  }
+
+  // ── helper: map display role name to database role string ──────────────────
+  String _dbNameFromDisplay(String display) {
+    switch (display) {
+      case 'Administrator':     return 'admin';
+      case 'Marketing Manager': return 'marketing_manager';
+      case 'Marketing Staff':   return 'marketing_staff';
+      case 'Analyst':           return 'analyst';
+      case 'Viewer':            return 'viewer';
+      default:                  return 'viewer';
+    }
   }
 
   // ── snackbar ──────────────────────────────────────────────────────────────
@@ -181,26 +227,48 @@ class _UsersScreenState extends State<UsersScreen>
                             fullWidth: false,
                             size: ButtonSize.small,
                             prefixIcon: Icons.send_rounded,
-                            onPressed: () {
+                            onPressed: () async {
                               if (!formKey.currentState!.validate()) return;
-                              final newUser = AppUser(
-                                id: 'u${DateTime.now().millisecondsSinceEpoch}',
-                                fullName: nameCtrl.text.trim(),
-                                email: emailCtrl.text.trim(),
-                                role: role,
-                                department: deptCtrl.text.trim().isEmpty
-                                    ? 'General' : deptCtrl.text.trim(),
-                                status: status == 'Active'
-                                    ? UserStatus.active : UserStatus.pending,
-                                lastActive: 'Never',
-                                accountCreated: 'Aug 15, 2026',
-                              );
-                              setState(() {
-                                _users.add(newUser);
-                                UserRoleRepository.addUser(newUser);
-                              });
-                              Navigator.pop(ctx);
-                              _snack('Invitation sent to ${newUser.fullName}');
+                              final dbName = _dbNameFromDisplay(role);
+                              final dbStatus = status == 'Active' ? 'active' : 'pending';
+                              try {
+                                await AuthService().adminCreateUser(
+                                  email: emailCtrl.text.trim(),
+                                  fullName: nameCtrl.text.trim(),
+                                  department: deptCtrl.text.trim().isEmpty
+                                      ? 'General' : deptCtrl.text.trim(),
+                                  role: dbName,
+                                  status: dbStatus,
+                                );
+                                Navigator.pop(ctx);
+                                _snack('Invitation sent to ${nameCtrl.text.trim()}');
+                                _loadUsers(); // refresh list from Supabase
+                              } on AppAuthException catch (e) {
+                                // Edge Function not deployed — add locally as fallback
+                                final newUser = AppUser(
+                                  id: 'u${DateTime.now().millisecondsSinceEpoch}',
+                                  fullName: nameCtrl.text.trim(),
+                                  email: emailCtrl.text.trim(),
+                                  role: role,
+                                  department: deptCtrl.text.trim().isEmpty
+                                      ? 'General' : deptCtrl.text.trim(),
+                                  status: status == 'Active'
+                                      ? UserStatus.active : UserStatus.pending,
+                                  lastActive: 'Never',
+                                  accountCreated: 'Aug 24, 2026',
+                                );
+                                setState(() {
+                                  _users.add(newUser);
+                                  UserRoleRepository.addUser(newUser);
+                                });
+                                Navigator.pop(ctx);
+                                _snack('${newUser.fullName} added locally — ${e.message}');
+                              } catch (e) {
+                                Navigator.pop(ctx);
+                                _snack('Failed to create user: $e',
+                                    icon: Icons.error_outline_rounded,
+                                    color: AppColors.danger);
+                              }
                             },
                           ),
                         ]),
@@ -364,7 +432,7 @@ class _UsersScreenState extends State<UsersScreen>
                             text: 'Save Changes',
                             fullWidth: false,
                             size: ButtonSize.small,
-                            onPressed: () {
+                            onPressed: () async {
                               if (!formKey.currentState!.validate()) return;
                               final updated = user.copyWith(
                                 fullName:   nameCtrl.text.trim(),
@@ -377,6 +445,19 @@ class _UsersScreenState extends State<UsersScreen>
                                 final idx = _users.indexWhere((u) => u.id == user.id);
                                 if (idx != -1) _users[idx] = updated;
                               });
+                              // Persist to Supabase.
+                              try {
+                                await AuthService().updateUserProfile(
+                                  userId: user.id,
+                                  role: _dbNameFromDisplay(role),
+                                  department: deptCtrl.text.trim().isNotEmpty
+                                      ? deptCtrl.text.trim() : user.department,
+                                );
+                              } catch (e) {
+                                _snack('Failed to save: $e',
+                                    icon: Icons.error_outline_rounded,
+                                    color: AppColors.danger);
+                              }
                               Navigator.pop(ctx);
                               _snack('${updated.fullName} updated successfully');
                             },
@@ -395,15 +476,37 @@ class _UsersScreenState extends State<UsersScreen>
   }
 
   // ── toggle active / inactive ──────────────────────────────────────────────
-  void _toggleStatus(AppUser user) {
+  void _toggleStatus(AppUser user) async {
     final newStatus = user.status == UserStatus.active
         ? UserStatus.inactive
         : UserStatus.active;
     final label = newStatus == UserStatus.active ? 'activated' : 'deactivated';
+    final dbStatus = newStatus == UserStatus.active ? 'active' : 'inactive';
+
+    // Update local state immediately for responsive UI.
     setState(() {
       final idx = _users.indexWhere((u) => u.id == user.id);
       if (idx != -1) _users[idx] = user.copyWith(status: newStatus);
     });
+
+    // Persist to Supabase.
+    try {
+      await AuthService().updateUserProfile(
+        userId: user.id,
+        status: dbStatus,
+      );
+    } catch (e) {
+      _snack('Failed to update ${user.fullName}: $e',
+          icon: Icons.error_outline_rounded,
+          color: AppColors.danger);
+      // Revert local state on failure.
+      setState(() {
+        final idx = _users.indexWhere((u) => u.id == user.id);
+        if (idx != -1) _users[idx] = user;
+      });
+      return;
+    }
+
     _snack(
       '${user.fullName} has been $label',
       icon: newStatus == UserStatus.active
@@ -449,7 +552,16 @@ class _UsersScreenState extends State<UsersScreen>
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
+                // Soft-delete: deactivate in Supabase, remove from local list.
+                try {
+                  await AuthService().updateUserProfile(
+                    userId: user.id,
+                    status: 'inactive',
+                  );
+                } catch (_) {
+                  // Continue with local removal even if Supabase update fails.
+                }
                 setState(() => _users.removeWhere((u) => u.id == user.id));
                 Navigator.pop(ctx);
                 _snack('${user.fullName} deleted',

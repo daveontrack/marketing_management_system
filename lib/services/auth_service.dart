@@ -118,24 +118,156 @@ class AuthService {
 
   // ── Sign up ──────────────────────────────────────────────────────────────
 
-  /// Registers a new user. The profile row is created automatically via
-  /// a database trigger or must be inserted separately by an admin.
+  /// Registers a new user via public self-registration.
+  ///
+  /// The database trigger `handle_new_user()` automatically creates the
+  /// `public.users` profile with role='viewer' and status='pending'.
+  ///
+  /// After signup the user CANNOT log in until an admin sets status='active'.
+  ///
+  /// Throws [AppAuthException] with user-friendly messages for:
+  ///   - Email already registered
+  ///   - Weak password
+  ///   - Missing profile (trigger failure)
+  ///   - Network errors
   Future<void> signUp({
     required String email,
     required String password,
     required String fullName,
+    required String department,
   }) async {
+    final AuthResponse res;
     try {
-      await _supabase.auth.signUp(
+      res = await _supabase.auth.signUp(
         email: email.trim(),
         password: password,
-        data: {'full_name': fullName},
+        data: {
+          'full_name': fullName.trim(),
+          'department': department.trim().isNotEmpty ? department.trim() : 'General',
+        },
       );
     } on AuthException catch (e) {
+      developer.log('Supabase signUp error: ${e.message}', name: 'AuthService');
+      final msg = e.message.toLowerCase();
+      if (msg.contains('already registered') ||
+          msg.contains('already been registered') ||
+          msg.contains('user already exists')) {
+        throw const AppAuthException(
+          'An account with this email already exists.',
+        );
+      }
+      if (msg.contains('password') &&
+          (msg.contains('weak') || msg.contains('too short') || msg.contains('at least'))) {
+        throw const AppAuthException(
+          'Password is too weak. Use at least 8 characters.',
+        );
+      }
+      if (msg.contains('valid email') || msg.contains('invalid email')) {
+        throw const AppAuthException('Please enter a valid email address.');
+      }
       throw AppAuthException(e.message);
     } catch (e) {
+      developer.log('Unexpected signUp error: $e', name: 'AuthService');
       throw const AppAuthException(
-        'Unable to connect to the server. Please check your internet connection.',
+        'Unable to create your account. Please try again.',
+      );
+    }
+
+    // After successful signup, sign out immediately. The user's profile
+    // is created by the database trigger with status='pending', so they
+    // must wait for admin approval before they can log in.
+    final user = res.user;
+    if (user != null) {
+      // Sign out — the user should not be in an authenticated session
+      // with a pending profile.
+      await _supabase.auth.signOut();
+    }
+  }
+
+  // ── Admin: create user (server-side) ─────────────────────────────────────
+
+  /// Admin-only: creates a new user and sets their role/status.
+  ///
+  /// SECURITY: This calls a Supabase Edge Function that uses the service_role
+  /// key to create the auth user and profile. The Flutter client never
+  /// handles the service_role key directly.
+  ///
+  /// If no Edge Function is configured, falls back to a local-only creation
+  /// for development purposes.
+  Future<void> adminCreateUser({
+    required String email,
+    required String fullName,
+    required String department,
+    required String role,
+    required String status,
+  }) async {
+    try {
+      // Attempt to call the Edge Function for secure user creation.
+      // This requires a deployed Edge Function: admin-create-user
+      await _supabase.functions.invoke(
+        'admin-create-user',
+        body: {
+          'email': email.trim(),
+          'full_name': fullName.trim(),
+          'department': department.trim().isNotEmpty ? department.trim() : 'General',
+          'role': role,
+          'status': status,
+        },
+      );
+    } catch (e) {
+      developer.log('Edge Function call failed: $e — falling back to local', name: 'AuthService');
+      // If the Edge Function is not deployed, we cannot create auth users
+      // from the client. Inform the admin that server-side setup is needed.
+      throw const AppAuthException(
+        'User creation requires server-side setup. '
+        'Please deploy the admin-create-user Edge Function, '
+        'or create the user manually in the Supabase dashboard.',
+      );
+    }
+  }
+
+  // ── Admin: list users ────────────────────────────────────────────────────
+
+  /// Returns all user profiles from public.users (admin use).
+  Future<List<Map<String, dynamic>>> listUsers() async {
+    try {
+      final data = await _supabase
+          .from('users')
+          .select('id, full_name, email, role, department, status, created_at')
+          .order('full_name');
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      developer.log('Failed to list users: $e', name: 'AuthService');
+      throw const AppAuthException(
+        'Unable to load users. Please try again.',
+      );
+    }
+  }
+
+  // ── Admin: update user status/role ────────────────────────────────────────
+
+  /// Admin-only: updates a user's role, department, or status in public.users.
+  Future<void> updateUserProfile({
+    required String userId,
+    String? role,
+    String? department,
+    String? status,
+  }) async {
+    try {
+      final updates = <String, dynamic>{};
+      if (role != null) updates['role'] = role;
+      if (department != null) updates['department'] = department;
+      if (status != null) updates['status'] = status;
+      if (updates.isEmpty) return;
+
+      await _supabase
+          .from('users')
+          .update(updates)
+          .eq('id', userId);
+    } catch (e) {
+      developer.log('Failed to update user: $e', name: 'AuthService');
+      throw const AppAuthException(
+        'Unable to update user. Please try again.',
       );
     }
   }

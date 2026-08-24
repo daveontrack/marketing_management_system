@@ -3,6 +3,7 @@ import '../../core/colors.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_textfield.dart';
+import 'signup_screen.dart';
 
 /// MarketFlow login screen.
 ///
@@ -246,7 +247,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  // Frontend-only registration — just returns to login.
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const SignupScreen()),
+                  );
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primary,

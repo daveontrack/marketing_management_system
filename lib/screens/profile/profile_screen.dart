@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/colors.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/auth/user_profile_provider.dart';
+import '../../models/user_role_models.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_textfield.dart';
 
@@ -18,11 +20,11 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   // ── profile state ─────────────────────────────────────────────────────────
-  String _name       = 'Hana Tsegaye';
-  String _role       = 'Marketing Manager';
-  String _email      = 'hana.tsegaye@marketflow.et';
-  String _phone      = '+251 911 234 567';
-  String _department = 'Marketing';
+  String _name       = '';
+  String _role       = '';
+  String _email      = '';
+  String _phone      = '';
+  String _department = '';
   String _location   = 'Addis Ababa, Ethiopia';
   String _contact    = 'Email';
 
@@ -41,6 +43,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _obscureNew     = true;
   bool _obscureConfirm = true;
   final _pwFormKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadProfileFromAuth());
+  }
+
+  /// Reads the authenticated user's profile from UserProfileProvider
+  /// and populates the local state — never hard-codes any user.
+  void _loadProfileFromAuth() {
+    final auth = UserProfileProvider.of(context);
+    if (!mounted) return;
+    setState(() {
+      _name       = auth.currentName;
+      _email      = auth.currentEmail;
+      _role       = UserRoleRepository.roleDisplayName(auth.currentRole);
+      _department = auth.currentDepartment;
+    });
+  }
 
   @override
   void dispose() {
@@ -393,7 +414,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ── account info card ─────────────────────────────────────────────────────
   Widget _buildAccountInfoCard() {
     return _section(context, 'Account Information', Icons.info_outline_rounded, [
-      _infoRow(context, Icons.verified_user_outlined, 'Account Status', 'Active',
+      _infoRow(context, Icons.verified_user_outlined, 'Account Status',
+          UserProfileProvider.of(context).currentStatus,
           valueColor: AppColors.success),
       _infoRow(context, Icons.calendar_today_outlined, 'Member Since',
           'January 12, 2024'),

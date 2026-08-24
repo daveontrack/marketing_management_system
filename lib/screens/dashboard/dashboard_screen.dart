@@ -5,6 +5,7 @@ import '../../core/constants.dart';
 import '../../core/routes.dart';
 import '../../core/theme.dart';
 import '../../models/dashboard_models.dart';
+import '../../widgets/auth/user_profile_provider.dart';
 import '../../widgets/cards/stat_card.dart';
 import '../../widgets/charts/campaign_performance_chart.dart';
 import '../../widgets/charts/leads_source_chart.dart';
@@ -470,6 +471,7 @@ class _WelcomeHeader extends StatelessWidget {
 
     final textPrimary = AppTheme.textPrimary(brightness);
     final textSec     = AppTheme.textSecondary(brightness);
+    final userName    = UserProfileProvider.of(context).currentName;
 
     final bannerBg = isDark
         ? const Color(0xFF1C1A27)
@@ -575,7 +577,7 @@ class _WelcomeHeader extends StatelessWidget {
               ),
             ),
             Text(
-              'Hana Tsegaye',
+              userName,
               style: TextStyle(
                 color: AppColors.primary,
                 fontSize: isNarrow ? 18 : 20,
