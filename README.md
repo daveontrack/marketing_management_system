@@ -1,271 +1,353 @@
-# MarketFlow — Marketing Management System
+# MarkFlow — Marketing Management System
 
-A cross-platform marketing admin dashboard built with **Flutter**, backed by a
-**Supabase (PostgreSQL)** database. Manage campaigns, customers, leads, sales
-opportunities, budgets, promotions, influencers, and content from one
-responsive web/desktop/mobile app.
+A full-stack **Flutter** marketing management dashboard backed by **Supabase (PostgreSQL)** with real authentication, role-based access control, and a complete user lifecycle.
 
-## Features
+![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)
+![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart)
+![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase)
 
-| Module | Capabilities | Persistence |
-|---|---|---|
-| Dashboard | KPI cards + 12 chart widgets, dynamic welcome banner | Supabase auth profile |
-| Campaigns | list/search/filter, create, details, edit, delete | Supabase |
-| Customers | segment stats, search/filter, full CRUD | Supabase |
-| Leads | pipeline stats, scoring, full CRUD | Supabase |
-| Opportunities | kanban board, stage tracking, full CRUD | Supabase |
-| Budgets | allocation vs. spend charts, utilization status, full CRUD | Supabase |
-| Promotions | coupon codes, usage limits, full CRUD | Supabase |
-| Influencers | roster stats, full CRUD | Supabase |
-| Content | calendar/schedule views, duplicate-as-draft, full CRUD | Supabase |
-| Reports | create/update report records | local only |
-| Users & Roles | user management, role assignment, approve/reject | Supabase |
-| Communications / Automation / Notifications | working UI, screen-local state | local only |
-| AI Assistant | rule-based Q&A over live repository data | n/a |
-| **Auth** | **public signup → pending approval → admin activate → login** | **Supabase Auth** |
-| **Profile** | **dynamic profile page showing authenticated user data** | **Supabase** |
+---
 
-## Authentication & User Lifecycle
+## Overview
 
-MarketFlow implements a complete user management flow:
+MarkFlow is a cross-platform (web, desktop, mobile) marketing management system that allows teams to manage campaigns, customers, leads, sales opportunities, budgets, promotions, influencers, and content — all from a single responsive application.
+
+### Key Capabilities
+
+- **Real Authentication** — Supabase Auth with email/password login
+- **Public Signup** — Self-registration with admin approval workflow
+- **5-Role Permission System** — Administrator, Marketing Manager, Marketing Staff, Analyst, Viewer
+- **Full CRUD** — Campaigns, Customers, Leads, Opportunities, Budgets, Promotions, Influencers, Content
+- **Dynamic Profile** — Profile page always shows the authenticated user's real data
+- **AI Assistant** — Rule-based marketing Q&A over live repository data
+- **Dark Mode** — Full light/dark theme support
+- **Responsive Layout** — Desktop sidebar, tablet drawer, mobile navigation
+
+---
+
+## User Lifecycle
 
 ```
-NEW USER
-    │
-    ▼
-Create Account (SignupScreen)
-    │
-    ▼
-Supabase Auth User (auth.users)
-    │
-    ▼
-Database Trigger → public.users
-    role = viewer
-    status = pending
-    │
-    ▼
-"Pending administrator approval"
-    │
-    ▼
-ADMIN (Users & Roles)
-    │
-    ├──► Reject → status = inactive → cannot log in
-    │
-    └──► Approve → status = active
-                │
-                ▼
-           USER receives invitation
-                │
-                ▼
-           Set Password → Login
-                │
-                ▼
-        Auth + Profile + Role + Permissions
-                │
-                ▼
-        Correct Dashboard (role-based UI)
+  ┌─────────────┐
+  │  NEW USER    │
+  └──────┬──────┘
+         ▼
+  ┌─────────────────────────┐
+  │  SignupScreen           │
+  │  (Full Name, Email,     │
+  │   Dept, Password)       │
+  └──────────┬──────────────┘
+             ▼
+  ┌─────────────────────────┐
+  │  Supabase Auth          │
+  │  auth.users created     │
+  └──────────┬──────────────┘
+             ▼
+  ┌─────────────────────────┐
+  │  Database Trigger       │
+  │  → public.users         │
+  │  role = viewer          │
+  │  status = pending       │
+  └──────────┬──────────────┘
+             ▼
+  ┌─────────────────────────┐
+  │  "Pending admin         │
+  │   approval"             │
+  └──────────┬──────────────┘
+             ▼
+  ┌─────────────────────────┐
+  │  ADMIN                  │
+  │  Users & Roles          │
+  │  → Approve (active)     │
+  │  → or Reject (inactive) │
+  └──────────┬──────────────┘
+             ▼
+  ┌─────────────────────────┐
+  │  USER logs in           │
+  │  → Dashboard            │
+  │  → Profile              │
+  │  → Role-based UI        │
+  └─────────────────────────┘
 ```
 
-### Auth Flow Details
+---
 
-- **Public Signup**: Users request an account via `SignupScreen`. A database
-  trigger automatically creates their profile with `role=viewer` and
-  `status=pending`. They cannot log in until approved.
-- **Admin Approval**: Admins can view all users in Users & Roles, toggle
-  status between active/inactive, and edit roles and departments.
-- **Login**: `AuthService.signIn()` validates credentials, loads the user
-  profile from `public.users`, checks status, and caches role-based
-  permissions.
-- **Profile**: The Profile page reads from `UserProfileProvider` to display
-  the currently authenticated user's real data — no hardcoded values.
-- **Sign Out**: Clears cached profile and permissions, returns to login.
+## Features by Module
 
-### Security
+| Module | Capabilities | Data Source |
+|--------|-------------|-------------|
+| **Auth** | Login, Signup, Sign Out, Session Restore | Supabase Auth |
+| **Dashboard** | KPI cards, charts, dynamic welcome banner | Supabase profile |
+| **Campaigns** | List, search, filter, create, edit, delete, details | Supabase |
+| **Customers** | Segment stats, full CRUD, search | Supabase |
+| **Leads** | Pipeline stats, scoring, full CRUD | Supabase |
+| **Opportunities** | Kanban board, stage tracking, full CRUD | Supabase |
+| **Budgets** | Allocation vs spend, utilization, full CRUD | Supabase |
+| **Promotions** | Coupon codes, usage limits, full CRUD | Supabase |
+| **Influencers** | Roster stats, full CRUD | Supabase |
+| **Content** | Calendar/schedule views, duplicate-as-draft, full CRUD | Supabase |
+| **Reports** | Create, update report records | Local |
+| **Users & Roles** | User management, role assignment, approve/reject | Supabase |
+| **Profile** | Dynamic user profile, edit dialog | Supabase profile |
+| **Communications** | Working UI | Local |
+| **Automation** | Working UI | Local |
+| **Notifications** | Working UI | Local |
+| **AI Assistant** | Rule-based Q&A over live data | n/a |
 
-- Public signup **cannot** select role or status (enforced by database trigger)
-- No passwords stored in `public.users` — Supabase Auth handles authentication
-- No `service_role` key in Flutter client
-- RLS policies restrict data access to authenticated users
-- Admin operations use `get_my_role()` security-definer function
+---
 
-### Roles & Permissions
+## Roles & Permissions
 
-| Role | Description |
-|---|---|
-| Administrator | Full system access — manage all users, roles, settings, data |
-| Marketing Manager | Campaigns, leads, team activities — create/edit most content |
-| Marketing Staff | Executes tasks — limited create and edit rights |
-| Analyst | Read-only access to reports, leads, campaign data |
-| Viewer | Browse summaries and dashboards only |
+| Role | Dashboard | Campaigns | Customers | Leads | Reports | Users & Roles | Settings |
+|------|-----------|-----------|-----------|-------|---------|---------------|----------|
+| **Administrator** | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Full | ✅ Edit |
+| **Marketing Manager** | 👁 View | ✅ Create/Edit | ✅ Create/Edit | ✅ Create/Edit | 👁 View | 👁 View | ❌ |
+| **Marketing Staff** | 👁 View | ✅ Create/Edit | 👁 View | 👁 View | 👁 View | 👁 View | ❌ |
+| **Analyst** | 👁 View | 👁 View | 👁 View | 👁 View | 👁 View | 👁 View | ❌ |
+| **Viewer** | 👁 View | 👁 View | ❌ | ❌ | 👁 View | ❌ | ❌ |
 
-## Architecture
-
-```
-Flutter Application
-        │
-     Screens            one folder per module; UI only
-        │
-   AuthService          signIn / signUp / signOut / profile helpers
-        │
-  UserProfileProvider   InheritedWidget via MaterialApp.builder
-        │               — all routes can access auth state
-  Repositories          in-memory list = fast sync source of truth;
-        │               every mutation mirrors to remote + init() at startup
-  Remote Stores         mappers between Dart models and PostgREST rows;
-        │               all calls fail-soft (try/catch + timeout)
-     Supabase           hosted Postgres + auto REST API + Auth + Edge Functions
-        │
-    PostgreSQL          see supabase_schema.sql (8 tables + users table)
-```
-
-Key behaviors:
-
-- **Instant UI** — reads/writes hit the repository's in-memory cache synchronously.
-- **Fire-and-forget sync** — mutations push to Supabase asynchronously.
-- **Fail-soft offline mode** — if the backend is unreachable the app silently keeps bundled seed data and never crashes.
-- **Self-seeding** — an empty remote table is populated from bundled sample data on first run.
-- **Guarded startup** — `main.dart` initializes Supabase first, then loads all repositories in parallel; one failing module cannot block launch.
-- **UserProfileProvider** — placed via `MaterialApp.builder` so every route (including all named routes) can access the authenticated user's profile.
+---
 
 ## Tech Stack
 
-- Flutter / Dart
-- `supabase_flutter` — database client + auth
-- `fl_chart` — charts
-- ChangeNotifier + InheritedWidget for theme/AI panel state
-- Database triggers (PostgreSQL) for signup profile creation
+| Technology | Purpose |
+|-----------|---------|
+| **Flutter / Dart** | Cross-platform UI framework |
+| **Supabase Flutter** | Database client + authentication |
+| **fl_chart** | Charts and data visualization |
+| **PostgreSQL** | Relational database (via Supabase) |
+| **Database Triggers** | Auto-create user profiles on signup |
+| **InheritedWidget** | Auth state propagation (`UserProfileProvider`) |
+| **ChangeNotifier** | Theme and AI panel state management |
+
+---
 
 ## Getting Started
 
-### 1. Set up the database
+### Prerequisites
 
-1. Create a free project at [supabase.com](https://supabase.com).
-2. Open **SQL Editor → New query**, paste the entire contents of
-   [`supabase_schema.sql`](supabase_schema.sql), and click **Run**.
-3. Apply the users table and production RLS:
-   - [`supabase/migrations/20260824_add_users_table.sql`](supabase/migrations/20260824_add_users_table.sql)
-   - [`supabase/migrations/20260824_production_rls.sql`](supabase/migrations/20260824_production_rls.sql)
-4. Apply the signup trigger:
-   - [`supabase/migrations/20260825_signup_trigger.sql`](supabase/migrations/20260825_signup_trigger.sql)
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) 3.x
+- A [Supabase](https://supabase.com) project (free tier works)
 
-> The signup trigger creates a `handle_new_user()` function that automatically
-> creates a `public.users` profile when someone signs up via Supabase Auth.
+### 1. Set Up the Database
 
-### 2. Configure credentials
+Open your Supabase dashboard → **SQL Editor** → **New query**, and run these migrations in order:
+
+```sql
+-- Step 1: Core schema (8 data tables)
+-- Paste contents of: supabase_schema.sql
+
+-- Step 2: Users table + seed data
+-- Paste contents of: supabase/migrations/20260824_add_users_table.sql
+
+-- Step 3: Production RLS policies
+-- Paste contents of: supabase/migrations/20260824_production_rls.sql
+
+-- Step 4: Signup trigger (auto-creates profiles)
+-- Paste contents of: supabase/migrations/20260825_signup_trigger.sql
+```
+
+### 2. Configure Credentials
 
 Edit `lib/config/supabase_config.dart`:
 
 ```dart
-static const String url = 'https://<your-project>.supabase.co';
-static const String anonKey = '<your publishable/anon key>';
+static const String url = 'https://YOUR_PROJECT.supabase.co';
+static const String anonKey = 'YOUR_ANON_KEY';
 ```
 
-The anon key is a publishable key — safe for client apps, protected by RLS.
-
-### 3. Run the app
+### 3. Install & Run
 
 ```bash
 flutter pub get
-flutter run -d chrome      # web (easiest)
-flutter run -d windows     # Windows desktop (needs VS C++ workload)
+flutter run -d chrome      # Web
+flutter run -d windows     # Windows desktop
+flutter run -d macos       # macOS desktop
 ```
 
-### 4. Test accounts
+---
+
+## Test Accounts
 
 | Email | Password | Role | Department | Status |
-|---|---|---|---|---|
-| biruk.alemu@marketflow.et | Biruk@Admin2026! | Administrator | IT | active |
-| hana.tsegaye@marketflow.et | Hana@Manager2026! | Marketing Manager | Marketing | active |
-| robel.tesfaye@marketflow.et | Robel@Staff2026! | Marketing Staff | Creative | active |
-| tigist.bekele@marketflow.et | Tigist@Analyst2026! | Analyst | Analytics | active |
-| selamawit.girma@marketflow.et | Selam@Viewer2026! | Viewer | Sales | active |
-| dawit.haile@marketflow.et | Dawit@Staff2026! | Marketing Staff | Marketing | inactive |
-| yohannes.tadesse@marketflow.et | Yohannes@Manager2026! | Marketing Manager | Growth | pending |
-| marta.desta@marketflow.et | Marta@Analyst2026! | Analyst | Analytics | pending |
+|-------|----------|------|------------|--------|
+| biruk.alemu@marketflow.et | Biruk@Admin2026! | Administrator | IT | Active |
+| hana.tsegaye@marketflow.et | Hana@Manager2026! | Marketing Manager | Marketing | Active |
+| robel.tesfaye@marketflow.et | Robel@Staff2026! | Marketing Staff | Creative | Active |
+| tigist.bekele@marketflow.et | Tigist@Analyst2026! | Analyst | Analytics | Active |
+| selamawit.girma@marketflow.et | Selam@Viewer2026! | Viewer | Sales | Active |
+| dawit.haile@marketflow.et | Dawit@Staff2026! | Marketing Staff | Marketing | Inactive |
+| yohannes.tadesse@marketflow.et | Yohannes@Manager2026! | Marketing Manager | Growth | Pending |
+| marta.desta@marketflow.et | Marta@Analyst2026! | Analyst | Analytics | Pending |
+
+> **Note:** Inactive and pending users will be rejected at login.
+
+---
 
 ## Database Schema
 
-Tables in `supabase_schema.sql` plus the `users` table from migrations.
+| Table | Key Type | Description |
+|-------|----------|-------------|
+| `users` | UUID (FK → auth.users) | Application profiles linked to Supabase Auth |
+| `campaigns` | TEXT | Marketing campaigns with JSONB arrays |
+| `customers` | INT IDENTITY | Customer records with unique email |
+| `leads` | INT IDENTITY | Sales leads with 0–100 score |
+| `opportunities` | INT IDENTITY | Sales pipeline (5 stages) |
+| `budgets` | TEXT | Budget allocations and spend tracking |
+| `promotions` | TEXT | Coupons with text[] array columns |
+| `influencers` | TEXT | Influencer roster |
+| `content_items` | TEXT | Content calendar and assets |
 
-| Table | Primary key | Notes |
-|---|---|---|
-| users | uuid (auth.users FK) | application profile linked to Supabase Auth |
-| campaigns | text | jsonb activities/coupons arrays |
-| customers | int identity | unique email index |
-| leads | int identity | score 0–100 check constraint |
-| opportunities | int identity | five-stage pipeline |
-| budgets | text | matches `lib/models/budget.dart` |
-| promotions | text | `coupon_codes text[]` array column |
-| influencers | text | avatar color derived in-app from id |
-| content_items | text | type drives icon/color mapping |
+All tables have **Row Level Security** enabled with authenticated-only access policies.
 
-Row Level Security is enabled on every table. Production RLS policies
-enforce authenticated-only access with role-based admin restrictions.
+---
 
 ## Project Structure
 
 ```
 lib/
-├── main.dart                  # init Supabase -> parallel repo init -> runApp
+├── main.dart                          # App entry: Supabase init → repos → runApp
 ├── config/
-│   └── supabase_config.dart   # project URL + anon key
-├── core/                      # routes, theme, colors, constants, notifiers
-├── models/                    # data classes + repositories (one per module)
+│   └── supabase_config.dart           # Project URL + anon key
+├── core/
+│   ├── routes.dart                    # Named route table (21 routes)
+│   ├── theme.dart                     # Light/dark theme definitions
+│   ├── colors.dart                    # AppColors palette
+│   ├── constants.dart                 # Spacing, breakpoints, labels
+│   ├── theme_notifier.dart            # Theme mode switching
+│   └── ai_notifier.dart              # AI panel open/close state
+├── models/
+│   ├── campaign.dart                  # Campaign model + repository
+│   ├── customer.dart                  # Customer model + repository
+│   ├── lead.dart                      # Lead model + repository
+│   ├── opportunity.dart               # Opportunity model + repository
+│   ├── budget.dart                    # Budget model + repository
+│   ├── promotion.dart                 # Promotion model + repository
+│   ├── influencer.dart                # Influencer model + repository
+│   ├── content_item.dart              # Content model + repository
+│   ├── user_role_models.dart          # AppUser, AppRole, permissions
+│   └── dashboard_models.dart          # KPI stats, chart data
 ├── services/
-│   ├── auth_service.dart      # signIn / signUp / signOut / profile helpers
-│   ├── campaign_remote_service.dart
-│   ├── entity_remote_stores.dart   # Customer/Lead/Opportunity/Budget/
-│   │                               # Promotion/Influencer/Content stores
-│   ├── marketing_data_service.dart # read-only facade used by the AI
-│   └── ai_service.dart             # rule-based assistant
+│   ├── auth_service.dart              # Auth: signIn, signUp, signOut, profile
+│   ├── campaign_remote_service.dart   # Campaign Supabase operations
+│   ├── entity_remote_stores.dart      # CRUD stores for all modules
+│   ├── marketing_data_service.dart    # Read-only facade for AI
+│   └── ai_service.dart               # Rule-based AI assistant
 ├── widgets/
 │   ├── auth/
-│   │   ├── auth_gate.dart          # session restore + route guard
-│   │   └── user_profile_provider.dart  # InheritedWidget for auth state
-│   ├── layout/                     # sidebar, topbar, app shell
-│   ├── common/                     # CustomButton, CustomTextField
-│   └── ...                         # cards, badges, dialogs, charts
-└── screens/
-    ├── auth/
-    │   ├── login_screen.dart       # email/password login
-    │   └── signup_screen.dart      # public account request
-    ├── dashboard/                  # KPI cards + charts
-    ├── profile/                    # dynamic authenticated user profile
-    ├── users/                      # user management + roles & permissions
-    └── ...                         # 21 routed pages, one folder per module
+│   │   ├── auth_gate.dart             # Session restore + route guard
+│   │   └── user_profile_provider.dart # InheritedWidget for auth state
+│   ├── layout/
+│   │   ├── app_layout.dart            # Master shell (sidebar + topbar + body)
+│   │   ├── app_sidebar.dart           # Navigation sidebar
+│   │   └── app_topbar.dart            # Top action bar
+│   ├── common/
+│   │   ├── custom_button.dart         # Reusable button component
+│   │   └── custom_textfield.dart      # Reusable text field component
+│   ├── cards/                         # StatCard, KPI cards
+│   ├── charts/                        # Campaign, Leads, Charts
+│   └── dashboard/                     # Dashboard widget components
+├── screens/
+│   ├── auth/
+│   │   ├── login_screen.dart          # Email/password login
+│   │   └── signup_screen.dart         # Public account request
+│   ├── dashboard/dashboard_screen.dart
+│   ├── campaigns/                     # List, create, edit, details
+│   ├── customers/customers_screen.dart
+│   ├── leads/leads_screen.dart
+│   ├── opportunities/opportunities_screen.dart
+│   ├── influencers/influencers_screen.dart
+│   ├── content/content_screen.dart
+│   ├── promotions/promotions_screen.dart
+│   ├── budget/budget_screen.dart
+│   ├── communications/communications_screen.dart
+│   ├── automation/automation_screen.dart
+│   ├── reports/reports_screen.dart
+│   ├── notifications/notifications_screen.dart
+│   ├── users/users_screen.dart        # User management + roles
+│   ├── profile/profile_screen.dart    # Authenticated user profile
+│   └── settings/settings_screen.dart
 
 supabase/
 └── migrations/
-    ├── 20260824_add_users_table.sql    # users table + seed data
-    ├── 20260824_production_rls.sql     # production RLS policies
-    └── 20260825_signup_trigger.sql     # auto-create profile on signup
+    ├── 20260824_add_users_table.sql   # Users table + seed data
+    ├── 20260824_production_rls.sql    # Production RLS policies
+    └── 20260825_signup_trigger.sql    # Auto-create profile on signup
 ```
 
-## Adding a New Synced Module
+---
 
-Follow the established three-step pattern (see Influencers or Content for a
-minimal example):
+## Architecture
 
-1. Add a remote store class in `lib/services/entity_remote_stores.dart`.
-2. Give the model's repository `init/add/update/remove/nextId` methods that
-   call the store fire-and-forget.
-3. Register the repository's `init()` in `lib/main.dart` and create its table
-   in `supabase_schema.sql`.
+```
+┌──────────────────────────────────────────────────┐
+│                  Flutter App                      │
+├──────────────────────────────────────────────────┤
+│  MaterialApp.builder                             │
+│    └── UserProfileProvider (auth state)          │
+│          ├── AuthGate (route guard)              │
+│          │     ├── LoginScreen                   │
+│          │     ├── SignupScreen                  │
+│          │     └── AppLayoutPage (authenticated) │
+│          │           ├── AppSidebar              │
+│          │           ├── AppTopBar               │
+│          │           └── Page Content            │
+│          └── Screens read auth via               │
+│              UserProfileProvider.of(context)     │
+├──────────────────────────────────────────────────┤
+│  AuthService (singleton)                         │
+│    ├── signIn() → profile + permissions cache    │
+│    ├── signUp() → Supabase Auth + trigger        │
+│    ├── signOut() → clear cache                   │
+│    ├── listUsers() → admin user list             │
+│    └── updateUserProfile() → admin edits         │
+├──────────────────────────────────────────────────┤
+│  Repositories (in-memory cache)                  │
+│    └── init() at startup → mirrors to Supabase   │
+├──────────────────────────────────────────────────┤
+│  Supabase (PostgreSQL + Auth + RLS)              │
+└──────────────────────────────────────────────────┘
+```
+
+**Key Design Decisions:**
+
+- **`UserProfileProvider` via `MaterialApp.builder`** — ensures all routes (named and pushed) can access the authenticated profile
+- **Fail-soft offline mode** — if Supabase is unreachable, the app uses bundled seed data
+- **Self-seeding repositories** — empty remote tables are populated from sample data on first run
+- **Guarded startup** — one failing module cannot block the app from launching
+
+---
+
+## Security
+
+| Requirement | Implementation |
+|-------------|---------------|
+| No passwords in public.users | ✅ Supabase Auth handles credentials |
+| No service_role in Flutter | ✅ Only anon key used client-side |
+| Signup can't set role/status | ✅ Database trigger hardcodes `role=viewer`, `status=pending` |
+| Pending users blocked | ✅ `signIn()` rejects non-active profiles |
+| RLS on all tables | ✅ Authenticated-only policies |
+| Admin operations secured | ✅ `get_my_role()` security-definer function |
+
+---
 
 ## Roadmap
 
-- [x] Real authentication (Supabase Auth) wired into the login screen
-- [x] Public signup with pending approval workflow
+- [x] Supabase Auth integration
+- [x] Public signup with pending approval
 - [x] Admin user management (Users & Roles)
-- [x] Role-based permission system (5 roles)
-- [x] Profile page shows authenticated user data
-- [ ] Supabase Edge Function for admin user creation (currently falls back to local)
-- [ ] Point Dashboard KPIs/charts at live repository data
-- [ ] Realtime updates via Supabase streams
+- [x] 5-role permission system
+- [x] Dynamic profile page
+- [x] Production RLS policies
+- [x] Database trigger for signup
+- [ ] Supabase Edge Function for admin user creation
+- [ ] Live Dashboard KPIs from database
+- [ ] Realtime updates via Supabase subscriptions
 - [ ] Email notifications for account approval
+- [ ] Password reset flow
 
-## Known Limitations
+---
 
-- Dashboard analytics currently render static demo numbers.
-- Reports/Notifications/Automation/Communications reset on restart.
-- Admin user creation falls back to local list when Edge Function is not deployed.
+## License
+
+This project is for educational purposes.
